@@ -1,117 +1,138 @@
-using System.Text.Json;
 using TimeGuard.Models;
 using TimeGuard.Services;
 using Xunit;
 
 namespace TimeGuard.Tests;
 
-public class StorageServiceTests : IDisposable
+public class DatabaseServiceTests : IDisposable
 {
-    // Use a temp directory so tests don't touch the real %AppData%\TimeGuard
-    private readonly string _tempDir;
+    private readonly string _dbPath;
+    private readonly string _connString;
 
-    public StorageServiceTests()
+    public DatabaseServiceTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"TimeGuardTest_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-
-        // Point StorageService at the temp directory via environment override
-        // (We use a subclass to override the paths)
+        _dbPath     = Path.Combine(Path.GetTempPath(), $"tgtest_{Guid.NewGuid():N}.db");
+        _connString = $"Data Source={_dbPath};";
     }
 
-    // ── Config round-trip ─────────────────────────────────────────────────────
+    private DatabaseService CreateSvc() => new(_connString);
+
+    // ── Settings ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Config_RoundTrip()
+    public void Settings_RoundTrip()
     {
-        var svc = new TestableStorageService(_tempDir);
-        var config = new AppConfig
+        var svc = CreateSvc();
+        svc.SetSetting("TestKey", "TestValue");
+        Assert.Equal("TestValue", svc.GetSetting("TestKey"));
+    }
+
+    [Fact]
+    public void Settings_ReturnsNull_WhenMissing()
+    {
+        var svc = CreateSvc();
+        Assert.Null(svc.GetSetting("NonExistent"));
+    }
+
+    // ── App Rules ─────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AppRules_InsertAndRetrieve()
+    {
+        var svc  = CreateSvc();
+        var rule = new AppRule
         {
-            PasswordHash = "hash",
-            PasswordSalt = "salt",
-            OverallDailyLimitMinutes = 90,
-            Rules =
-            [
-                new AppRule
-                {
-                    ProcessName          = "roblox",
-                    DisplayName          = "Roblox",
-                    DailyLimitMinutes    = 60,
-                    AllowedWindowStart   = "15:00",
-                    AllowedWindowEnd     = "20:00",
-                    Enabled              = true
-                }
-            ]
+            ProcessName          = "roblox",
+            DisplayName          = "Roblox",
+            DailyLimitMinutes    = 60,
+            AllowedWindowStart   = "15:00",
+            AllowedWindowEnd     = "20:00",
+            BreakEveryMinutes    = 30,
+            BreakDurationMinutes = 5,
+            Enabled              = true
         };
 
-        svc.SaveConfig(config);
-        var loaded = svc.LoadConfig();
+        svc.SaveRule(rule);
+        var rules = svc.GetRules();
 
-        Assert.Equal("hash", loaded.PasswordHash);
-        Assert.Equal(90, loaded.OverallDailyLimitMinutes);
-        Assert.Single(loaded.Rules);
-        Assert.Equal("roblox", loaded.Rules[0].ProcessName);
-        Assert.Equal("15:00", loaded.Rules[0].AllowedWindowStart);
+        Assert.Single(rules);
+        Assert.Equal("roblox",      rules[0].ProcessName);
+        Assert.Equal(60,            rules[0].DailyLimitMinutes);
+        Assert.Equal("15:00",       rules[0].AllowedWindowStart);
+        Assert.Equal(30,            rules[0].BreakEveryMinutes);
+        Assert.Equal(5,             rules[0].BreakDurationMinutes);
     }
 
     [Fact]
-    public void Config_ReturnsDefault_WhenMissing()
+    public void AppRules_Update()
     {
-        var svc    = new TestableStorageService(_tempDir);
-        var config = svc.LoadConfig();
+        var svc  = CreateSvc();
+        var rule = new AppRule { ProcessName = "roblox", DisplayName = "Roblox", Enabled = true };
+        svc.SaveRule(rule);
 
-        Assert.True(config.IsFirstRun);
-        Assert.Empty(config.Rules);
+        var saved = svc.GetRules()[0];
+        saved.DailyLimitMinutes = 120;
+        svc.SaveRule(saved);
+
+        Assert.Equal(120, svc.GetRules()[0].DailyLimitMinutes);
     }
 
-    // ── Daily log round-trip ──────────────────────────────────────────────────
+    [Fact]
+    public void AppRules_Delete()
+    {
+        var svc  = CreateSvc();
+        var rule = new AppRule { ProcessName = "roblox", DisplayName = "Roblox", Enabled = true };
+        svc.SaveRule(rule);
+        var id = svc.GetRules()[0].Id;
+
+        svc.DeleteRule(id);
+        Assert.Empty(svc.GetRules());
+    }
+
+    // ── Daily Usage ───────────────────────────────────────────────────────────
 
     [Fact]
-    public void DailyLog_RoundTrip()
+    public void DailyUsage_UpsertAndLoad()
     {
-        var svc  = new TestableStorageService(_tempDir);
-        var date = new DateOnly(2026, 3, 1);
-        var log  = new DailyLog
+        var svc   = CreateSvc();
+        var date  = new DateOnly(2026, 3, 1);
+        var entry = new UsageEntry
         {
-            Date  = date,
-            TotalUsageMinutes = 45.5,
-            Entries =
-            [
-                new UsageEntry
-                {
-                    ProcessName   = "roblox",
-                    UsageMinutes  = 45.5,
-                    Blocked       = false,
-                    Sessions      =
-                    [
-                        new SessionEntry
-                        {
-                            Start = new DateTime(2026, 3, 1, 15, 0, 0),
-                            End   = new DateTime(2026, 3, 1, 15, 45, 0)
-                        }
-                    ]
-                }
-            ]
+            ProcessName  = "roblox",
+            UsageMinutes = 45.5,
+            Blocked      = false
         };
 
-        svc.SaveLog(log);
-        var loaded = svc.LoadLog(date);
+        svc.UpsertUsageEntry(date, entry);
+        var log = svc.LoadLog(date);
 
-        Assert.Equal(45.5, loaded.TotalUsageMinutes);
-        Assert.Single(loaded.Entries);
-        Assert.Equal("roblox", loaded.Entries[0].ProcessName);
-        Assert.Single(loaded.Entries[0].Sessions);
+        Assert.Single(log.Entries);
+        Assert.Equal(45.5, log.Entries[0].UsageMinutes);
     }
 
     [Fact]
-    public void DailyLog_ReturnsDefault_WhenMissing()
+    public void DailyUsage_Upsert_UpdatesExisting()
     {
-        var svc    = new TestableStorageService(_tempDir);
-        var loaded = svc.LoadLog(new DateOnly(2099, 1, 1));
+        var svc   = CreateSvc();
+        var date  = new DateOnly(2026, 3, 1);
+        var entry = new UsageEntry { ProcessName = "roblox", UsageMinutes = 30 };
 
-        Assert.Empty(loaded.Entries);
-        Assert.Equal(0, loaded.TotalUsageMinutes);
+        svc.UpsertUsageEntry(date, entry);
+        entry.UsageMinutes = 60;
+        svc.UpsertUsageEntry(date, entry);
+
+        Assert.Equal(60, svc.LoadLog(date).Entries[0].UsageMinutes);
     }
+
+    [Fact]
+    public void DailyLog_ReturnsEmpty_WhenNoData()
+    {
+        var svc = CreateSvc();
+        var log = svc.LoadLog(new DateOnly(2099, 1, 1));
+        Assert.Empty(log.Entries);
+    }
+
+    // ── GetOrCreate helpers ───────────────────────────────────────────────────
 
     [Fact]
     public void GetOrCreate_CreatesEntry_WhenMissing()
@@ -128,59 +149,13 @@ public class StorageServiceTests : IDisposable
     {
         var log = new DailyLog { Date = DateOnly.FromDateTime(DateTime.Today) };
         var e1  = log.GetOrCreate("chrome");
-        var e2  = log.GetOrCreate("Chrome"); // different casing
+        var e2  = log.GetOrCreate("Chrome");
 
         Assert.Same(e1, e2);
     }
 
     public void Dispose()
     {
-        try { Directory.Delete(_tempDir, recursive: true); } catch { }
-    }
-}
-
-/// <summary>
-/// Allows tests to inject a custom data directory instead of the real %AppData%.
-/// </summary>
-internal sealed class TestableStorageService : StorageService
-{
-    private readonly string _dataDir;
-    private string ConfigPath => Path.Combine(_dataDir, "config.json");
-    private string LogsDir    => Path.Combine(_dataDir, "logs");
-
-    public TestableStorageService(string dataDir) : base()
-    {
-        _dataDir = dataDir;
-        Directory.CreateDirectory(LogsDir);
-    }
-
-    // Override file paths by shadowing the private helpers via new public methods
-    public new void SaveConfig(AppConfig config)
-    {
-        var json = System.Text.Json.JsonSerializer.Serialize(config,
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(ConfigPath, json);
-    }
-
-    public new AppConfig LoadConfig()
-    {
-        if (!File.Exists(ConfigPath)) return new AppConfig();
-        return System.Text.Json.JsonSerializer.Deserialize<AppConfig>(
-            File.ReadAllText(ConfigPath)) ?? new AppConfig();
-    }
-
-    public new void SaveLog(DailyLog log)
-    {
-        var path = Path.Combine(LogsDir, $"{log.Date:yyyy-MM-dd}.json");
-        File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(log,
-            new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-    }
-
-    public new DailyLog LoadLog(DateOnly date)
-    {
-        var path = Path.Combine(LogsDir, $"{date:yyyy-MM-dd}.json");
-        if (!File.Exists(path)) return new DailyLog { Date = date };
-        return System.Text.Json.JsonSerializer.Deserialize<DailyLog>(File.ReadAllText(path))
-               ?? new DailyLog { Date = date };
+        try { File.Delete(_dbPath); } catch { }
     }
 }

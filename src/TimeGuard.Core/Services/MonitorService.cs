@@ -6,42 +6,51 @@ namespace TimeGuard.Services;
 /// <summary>
 /// Background polling loop. Every 5 seconds it:
 ///   1. Enumerates running processes
-///   2. Accumulates usage time in today's log
-///   3. Calls RulesEngine to get actions
-///   4. Fires events so the UI layer (App.xaml.cs) can show popups and kill processes
+///   2. Accumulates usage time in today's DailyUsage rows
+///   3. Tracks time-since-last-break per session
+///   4. Calls RulesEngine to get actions
+///   5. Fires events so App.xaml.cs can show popups and kill processes
 /// </summary>
 public sealed class MonitorService : IDisposable
 {
-    private readonly StorageService _storage;
-    private readonly RulesEngine    _rules;
+    private readonly DatabaseService _db;
+    private readonly RulesEngine     _rules;
     private readonly CancellationTokenSource _cts = new();
 
     private AppConfig _config;
     private DailyLog  _log;
 
-    // Key = processName (lowercase), Value = time we first saw it running this tick-cycle
-    private readonly Dictionary<string, DateTime> _sessionStarts = new();
+    // processName (lowercase) → (sessionDbId, timeSinceBreakMins)
+    private readonly Dictionary<string, (int SessionId, double TimeSinceBreak)> _sessions = new();
 
-    // Events raised on the calling thread via SynchronizationContext
-    public event Action<string, string>? BlockRequested;   // (processName, displayName)
-    public event Action<string, string>? WarnRequested;    // (processName, displayName)
+    public event Action<string, string>? BlockRequested;      // (processName, displayName)
+    public event Action<string, string>? WarnRequested;       // (processName, displayName)
+    public event Action<string, string, int>? BreakRequested; // (processName, displayName, sessionId)
 
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
+    private const double PollMinutes = 5.0 / 60.0;
 
-    public MonitorService(StorageService storage, RulesEngine rules, AppConfig config)
+    public MonitorService(DatabaseService db, RulesEngine rules, AppConfig config)
     {
-        _storage = storage;
-        _rules   = rules;
-        _config  = config;
-        _log     = storage.LoadTodayLog();
+        _db     = db;
+        _rules  = rules;
+        _config = config;
+        _log    = db.LoadTodayLog();
     }
 
-    public void Start() =>
-        Task.Run(() => RunLoop(_cts.Token));
+    public void Start() => Task.Run(() => RunLoop(_cts.Token));
 
-    public void ReloadConfig(AppConfig config)
+    public void ReloadConfig(AppConfig config) => _config = config;
+
+    /// <summary>Called by App.xaml.cs after the break overlay is dismissed.</summary>
+    public void OnBreakCompleted(string processName)
     {
-        _config = config;
+        var key = processName.ToLowerInvariant();
+        if (_sessions.TryGetValue(key, out var s))
+        {
+            _db.ResetBreakTimer(s.SessionId);
+            _sessions[key] = (s.SessionId, 0);
+        }
     }
 
     private async Task RunLoop(CancellationToken ct)
@@ -54,59 +63,59 @@ public sealed class MonitorService : IDisposable
             {
                 var today = DateOnly.FromDateTime(DateTime.Now);
 
-                // ── Midnight rollover ─────────────────────────────────────────
                 if (today != lastDate)
                 {
-                    _log = _storage.LoadTodayLog(); // fresh log for new day
-                    _sessionStarts.Clear();
+                    _log = _db.LoadTodayLog();
+                    CloseAllSessions();
                     lastDate = today;
                 }
 
                 var runningNames = GetMonitoredRunningProcessNames();
                 var now          = TimeOnly.FromDateTime(DateTime.Now);
 
-                // ── Accumulate usage ──────────────────────────────────────────
                 AccumulateUsage(runningNames);
 
-                // ── Evaluate rules ────────────────────────────────────────────
-                var actions = _rules.Evaluate(runningNames, _log, _config, now);
+                var breakTimers = _sessions.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value.TimeSinceBreak);
+                var actions = _rules.Evaluate(runningNames, _log, _config, now, breakTimers);
 
                 foreach (var action in actions)
                 {
+                    var entry = _log.GetOrCreate(action.ProcessName);
+
                     if (action.Kind == RulesEngine.ActionKind.Block)
                     {
-                        var entry = _log.GetOrCreate(action.ProcessName);
                         entry.Blocked = true;
                         CloseSession(action.ProcessName);
+                        _db.UpsertUsageEntry(today, entry);
                         BlockRequested?.Invoke(action.ProcessName, action.DisplayName);
                     }
                     else if (action.Kind == RulesEngine.ActionKind.WarnFiveMinutes)
                     {
-                        var entry = _log.GetOrCreate(action.ProcessName);
                         entry.WarningSent = true;
+                        _db.UpsertUsageEntry(today, entry);
                         WarnRequested?.Invoke(action.ProcessName, action.DisplayName);
+                    }
+                    else if (action.Kind == RulesEngine.ActionKind.BreakDue)
+                    {
+                        if (_sessions.TryGetValue(action.ProcessName.ToLowerInvariant(), out var s))
+                            BreakRequested?.Invoke(action.ProcessName, action.DisplayName, s.SessionId);
                     }
                 }
 
-                // ── Re-kill relaunched blocked apps ───────────────────────────
-                var relaunched = _rules.GetRelaunched(runningNames, _log, _config);
-                foreach (var (procName, displayName) in relaunched)
+                foreach (var (procName, displayName) in _rules.GetRelaunched(runningNames, _log, _config))
                     BlockRequested?.Invoke(procName, displayName);
 
-                // ── Update overall total ──────────────────────────────────────
                 _log.TotalUsageMinutes = _log.Entries.Sum(e => e.UsageMinutes);
                 if (_config.OverallDailyLimitMinutes > 0 &&
                     _log.TotalUsageMinutes >= _config.OverallDailyLimitMinutes)
                     _log.OverallCapHit = true;
-
-                _storage.SaveLog(_log);
             }
             catch (Exception ex)
             {
-                // Log to a file but never crash the background loop
                 File.AppendAllText(
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                        "TimeGuard", "error.log"),
+                    Path.Combine(DatabaseService.DataDir, "error.log"),
                     $"[{DateTime.Now:O}] {ex}\n");
             }
 
@@ -116,13 +125,13 @@ public sealed class MonitorService : IDisposable
 
     private IReadOnlyList<string> GetMonitoredRunningProcessNames()
     {
-        var monitoredNames = new HashSet<string>(
+        var monitored = new HashSet<string>(
             _config.Rules.Where(r => r.Enabled)
                          .Select(r => r.ProcessName.ToLowerInvariant()));
 
         return Process.GetProcesses()
             .Select(p => p.ProcessName.ToLowerInvariant())
-            .Where(monitoredNames.Contains)
+            .Where(monitored.Contains)
             .Distinct()
             .ToList();
     }
@@ -130,47 +139,50 @@ public sealed class MonitorService : IDisposable
     private void AccumulateUsage(IReadOnlyList<string> runningNames)
     {
         var runningSet = new HashSet<string>(runningNames);
-        var tick       = DateTime.Now;
+        var today      = DateOnly.FromDateTime(DateTime.Now);
 
-        // Start new sessions for newly seen processes
         foreach (var name in runningNames)
-            if (!_sessionStarts.ContainsKey(name))
-            {
-                _sessionStarts[name] = tick;
-                var entry = _log.GetOrCreate(name);
-                entry.Sessions.Add(new Models.SessionEntry { Start = tick });
-            }
+            if (!_sessions.ContainsKey(name))
+                _sessions[name] = (_db.OpenSession(name), 0);
 
-        // Close sessions for processes that have exited
-        foreach (var name in _sessionStarts.Keys.ToList())
+        foreach (var name in _sessions.Keys.ToList())
             if (!runningSet.Contains(name))
                 CloseSession(name);
 
-        // Add elapsed time since last poll for running sessions
         foreach (var name in runningNames)
         {
             if (_log.IsBlocked(name)) continue;
+
             var entry = _log.GetOrCreate(name);
-            // Usage is derived from session end times on save; just update the open session
-            var open = entry.Sessions.LastOrDefault(s => s.End is null);
-            if (open is not null)
-                entry.UsageMinutes = entry.Sessions.Sum(s => s.ElapsedMinutes);
+            entry.UsageMinutes += PollMinutes;
+
+            if (_sessions.TryGetValue(name, out var s))
+            {
+                var newBreak = s.TimeSinceBreak + PollMinutes;
+                _sessions[name] = (s.SessionId, newBreak);
+                _db.UpdateSession(s.SessionId, newBreak);
+            }
+
+            _db.UpsertUsageEntry(today, entry);
         }
     }
 
     private void CloseSession(string processName)
     {
-        if (!_sessionStarts.ContainsKey(processName)) return;
-        _sessionStarts.Remove(processName);
+        if (!_sessions.TryGetValue(processName, out var s)) return;
+        _db.CloseSession(s.SessionId, s.TimeSinceBreak);
+        _sessions.Remove(processName);
+    }
 
-        var entry = _log.GetOrCreate(processName);
-        var open  = entry.Sessions.LastOrDefault(s => s.End is null);
-        if (open is not null)
-            open.End = DateTime.Now;
+    private void CloseAllSessions()
+    {
+        foreach (var name in _sessions.Keys.ToList())
+            CloseSession(name);
     }
 
     public void Dispose()
     {
+        CloseAllSessions();
         _cts.Cancel();
         _cts.Dispose();
     }

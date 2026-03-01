@@ -5,6 +5,8 @@ namespace TimeGuard.Models;
 /// </summary>
 public class AppRule
 {
+    public int Id { get; set; }
+
     /// <summary>Process name to match (case-insensitive, without .exe)</summary>
     public string ProcessName { get; set; } = string.Empty;
 
@@ -20,6 +22,12 @@ public class AppRule
     /// <summary>Latest time app may be used (null = no restriction). Format: "HH:mm"</summary>
     public string? AllowedWindowEnd { get; set; }
 
+    /// <summary>Take a break every N minutes of play. 0 = no breaks.</summary>
+    public int BreakEveryMinutes { get; set; } = 0;
+
+    /// <summary>How long the forced break lasts in minutes.</summary>
+    public int BreakDurationMinutes { get; set; } = 0;
+
     public bool Enabled { get; set; } = true;
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -29,6 +37,8 @@ public class AppRule
 
     public bool HasDailyLimit => DailyLimitMinutes > 0;
 
+    public bool HasBreakSchedule => BreakEveryMinutes > 0 && BreakDurationMinutes > 0;
+
     /// <summary>Returns true if the current time falls inside the allowed window.</summary>
     public bool IsWithinAllowedWindow(TimeOnly now)
     {
@@ -37,7 +47,6 @@ public class AppRule
         var start = TimeOnly.Parse(AllowedWindowStart!);
         var end   = TimeOnly.Parse(AllowedWindowEnd!);
 
-        // Supports windows that don't cross midnight (e.g. 15:00–20:00)
         return now >= start && now <= end;
     }
 }

@@ -5,8 +5,13 @@ namespace TimeGuard.Models;
 /// </summary>
 public class SessionEntry
 {
+    public int Id { get; set; }
+    public string ProcessName { get; set; } = string.Empty;
     public DateTime Start { get; set; }
     public DateTime? End { get; set; }   // null while session is still running
+
+    /// <summary>Minutes of play accumulated since the last break (resets after each break).</summary>
+    public double TimeSinceBreakMinutes { get; set; } = 0;
 
     public double ElapsedMinutes =>
         (End ?? DateTime.Now).Subtract(Start).TotalMinutes;
@@ -17,12 +22,11 @@ public class SessionEntry
 /// </summary>
 public class UsageEntry
 {
+    public int Id { get; set; }
     public string ProcessName { get; set; } = string.Empty;
 
     /// <summary>Accumulated usage in minutes (sum of all sessions).</summary>
     public double UsageMinutes { get; set; } = 0;
-
-    public List<SessionEntry> Sessions { get; set; } = [];
 
     /// <summary>True once the process has been killed and blocked for today.</summary>
     public bool Blocked { get; set; } = false;
@@ -32,7 +36,7 @@ public class UsageEntry
 }
 
 /// <summary>
-/// The full daily log file: logs/YYYY-MM-DD.json
+/// Aggregated daily state — composed in memory from the DB, not stored as a single row.
 /// </summary>
 public class DailyLog
 {

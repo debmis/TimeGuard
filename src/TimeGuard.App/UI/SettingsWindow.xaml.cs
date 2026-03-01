@@ -1,26 +1,24 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows;
 using TimeGuard.Helpers;
 using TimeGuard.Models;
 using TimeGuard.Services;
+using WpfMessageBox = System.Windows.MessageBox;
 
 namespace TimeGuard.UI;
 
 public partial class SettingsWindow : Window
 {
-    private readonly StorageService _storage;
-    private AppConfig _config;
+    private readonly DatabaseService _db;
     private ObservableCollection<AppRule> _rules = [];
 
-    // Projection for the usage tab
     private record UsageRow(string ProcessName, string UsageMinutesDisplay, bool Blocked);
 
-    public SettingsWindow(StorageService storage)
+    public SettingsWindow(DatabaseService db)
     {
         InitializeComponent();
-        _storage = storage;
-        _config  = storage.LoadConfig();
-
+        _db = db;
         LoadRules();
         LoadUsage();
         LoadGlobalCap();
@@ -31,50 +29,89 @@ public partial class SettingsWindow : Window
 
     private void LoadRules()
     {
-        _rules = new ObservableCollection<AppRule>(_config.Rules);
+        _rules = new ObservableCollection<AppRule>(_db.GetRules());
         RulesGrid.ItemsSource = _rules;
     }
 
     private void OnAddRule(object sender, RoutedEventArgs e)
     {
         var dialog = new RuleEditWindow(new AppRule());
-        if (dialog.ShowDialog() == true)
-            _rules.Add(dialog.Result!);
+        if (dialog.ShowDialog() == true && dialog.Result is not null)
+        {
+            _db.SaveRule(dialog.Result);
+            LoadRules();
+        }
     }
 
     private void OnEditRule(object sender, RoutedEventArgs e)
     {
         if (RulesGrid.SelectedItem is not AppRule selected) return;
         var dialog = new RuleEditWindow(selected);
-        if (dialog.ShowDialog() == true)
+        if (dialog.ShowDialog() == true && dialog.Result is not null)
         {
-            var idx = _rules.IndexOf(selected);
-            _rules[idx] = dialog.Result!;
+            dialog.Result.Id = selected.Id;
+            _db.SaveRule(dialog.Result);
+            LoadRules();
         }
     }
 
     private void OnDeleteRule(object sender, RoutedEventArgs e)
     {
-        if (RulesGrid.SelectedItem is AppRule selected &&
-            MessageBox.Show($"Remove rule for '{selected.DisplayName}'?", "Confirm",
+        if (RulesGrid.SelectedItem is not AppRule selected) return;
+        if (WpfMessageBox.Show($"Remove rule for \'{selected.DisplayName}\'?", "Confirm",
                 MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-            _rules.Remove(selected);
+        {
+            _db.DeleteRule(selected.Id);
+            LoadRules();
+        }
+    }
+
+    private void OnPickProcess(object sender, RoutedEventArgs e)
+    {
+        var running = Process.GetProcesses()
+            .Select(p => p.ProcessName.ToLowerInvariant())
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        var picker = new ProcessPickerWindow(running);
+        if (picker.ShowDialog() == true && picker.SelectedProcess is not null)
+        {
+            var rule = new AppRule
+            {
+                ProcessName = picker.SelectedProcess,
+                DisplayName = picker.SelectedProcess,
+                Enabled = true
+            };
+            var dialog = new RuleEditWindow(rule);
+            if (dialog.ShowDialog() == true && dialog.Result is not null)
+            {
+                _db.SaveRule(dialog.Result);
+                LoadRules();
+            }
+        }
+    }
+
+    private void OnViewDashboard(object sender, RoutedEventArgs e)
+    {
+        new DashboardWindow(_db).ShowDialog();
     }
 
     // ── Usage Tab ─────────────────────────────────────────────────────────────
 
     private void LoadUsage()
     {
-        var log = _storage.LoadTodayLog();
-        UsageGrid.ItemsSource = log.Entries.Select(e =>
-            new UsageRow(e.ProcessName, $"{e.UsageMinutes:F1}", e.Blocked)).ToList();
+        var log = _db.LoadTodayLog();
+        UsageGrid.ItemsSource = log.Entries
+            .Select(e => new UsageRow(e.ProcessName, $"{e.UsageMinutes:F1}", e.Blocked))
+            .ToList();
     }
 
     // ── Global Cap Tab ────────────────────────────────────────────────────────
 
     private void LoadGlobalCap()
     {
-        OverallCapBox.Text = _config.OverallDailyLimitMinutes.ToString();
+        OverallCapBox.Text = _db.GetSetting("OverallDailyLimitMinutes") ?? "0";
     }
 
     // ── Security Tab ─────────────────────────────────────────────────────────
@@ -95,9 +132,8 @@ public partial class SettingsWindow : Window
         }
 
         var (hash, salt) = PasswordHelper.Hash(NewPasswordBox.Password);
-        _config.PasswordHash = hash;
-        _config.PasswordSalt = salt;
-        _storage.SaveConfig(_config);
+        _db.SetSetting("PasswordHash", hash);
+        _db.SetSetting("PasswordSalt", salt);
 
         NewPasswordBox.Clear();
         ConfirmPasswordBox.Clear();
@@ -115,12 +151,9 @@ public partial class SettingsWindow : Window
 
     private void OnSave(object sender, RoutedEventArgs e)
     {
-        _config.Rules = [.. _rules];
-
         if (int.TryParse(OverallCapBox.Text, out var cap))
-            _config.OverallDailyLimitMinutes = cap;
+            _db.SetSetting("OverallDailyLimitMinutes", cap.ToString());
 
-        _storage.SaveConfig(_config);
         DialogResult = true;
         Close();
     }

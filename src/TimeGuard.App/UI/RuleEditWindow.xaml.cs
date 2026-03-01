@@ -10,11 +10,13 @@ public partial class RuleEditWindow : Window
     public RuleEditWindow(AppRule existing)
     {
         InitializeComponent();
-        DisplayNameBox.Text  = existing.DisplayName;
-        ProcessNameBox.Text  = existing.ProcessName;
-        LimitBox.Text        = existing.DailyLimitMinutes.ToString();
-        WindowStartBox.Text  = existing.AllowedWindowStart ?? string.Empty;
-        WindowEndBox.Text    = existing.AllowedWindowEnd   ?? string.Empty;
+        DisplayNameBox.Text   = existing.DisplayName;
+        ProcessNameBox.Text   = existing.ProcessName;
+        LimitBox.Text         = existing.DailyLimitMinutes.ToString();
+        WindowStartBox.Text   = existing.AllowedWindowStart ?? string.Empty;
+        WindowEndBox.Text     = existing.AllowedWindowEnd   ?? string.Empty;
+        BreakEveryBox.Text    = existing.BreakEveryMinutes.ToString();
+        BreakDurationBox.Text = existing.BreakDurationMinutes.ToString();
     }
 
     private void OnSave(object sender, RoutedEventArgs e)
@@ -34,12 +36,26 @@ public partial class RuleEditWindow : Window
             return;
         }
 
+        if (!int.TryParse(BreakEveryBox.Text, out var breakEvery) || breakEvery < 0)
+        {
+            ErrorText.Text = "Break interval must be a non-negative number.";
+            ErrorText.Visibility = Visibility.Visible;
+            return;
+        }
+
+        if (!int.TryParse(BreakDurationBox.Text, out var breakDur) || breakDur < 0)
+        {
+            ErrorText.Text = "Break duration must be a non-negative number.";
+            ErrorText.Visibility = Visibility.Visible;
+            return;
+        }
+
         var start = WindowStartBox.Text.Trim();
         var end   = WindowEndBox.Text.Trim();
 
         if ((start.Length > 0) != (end.Length > 0))
         {
-            ErrorText.Text = "Provide both 'From' and 'Until' times, or leave both empty.";
+            ErrorText.Text = "Provide both From and Until times, or leave both empty.";
             ErrorText.Visibility = Visibility.Visible;
             return;
         }
@@ -59,6 +75,8 @@ public partial class RuleEditWindow : Window
             DailyLimitMinutes    = limit,
             AllowedWindowStart   = start.Length > 0 ? start : null,
             AllowedWindowEnd     = end.Length   > 0 ? end   : null,
+            BreakEveryMinutes    = breakEvery,
+            BreakDurationMinutes = breakDur,
             Enabled              = true
         };
         DialogResult = true;

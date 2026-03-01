@@ -8,7 +8,7 @@ namespace TimeGuard.Services;
 /// </summary>
 public class RulesEngine
 {
-    public enum ActionKind { Block, WarnFiveMinutes }
+    public enum ActionKind { Block, WarnFiveMinutes, BreakDue }
 
     public record RuleAction(ActionKind Kind, string ProcessName, string DisplayName, string Reason);
 
@@ -22,11 +22,13 @@ public class RulesEngine
         IEnumerable<string> runningProcessNames,
         DailyLog log,
         AppConfig config,
-        TimeOnly now)
+        TimeOnly now,
+        IReadOnlyDictionary<string, double>? breakTimers = null)
     {
         var actions = new List<RuleAction>();
         var running = new HashSet<string>(
             runningProcessNames.Select(p => p.ToLowerInvariant()));
+        breakTimers ??= new Dictionary<string, double>();
 
         // ── Check overall cap ─────────────────────────────────────────────────
         if (config.OverallDailyLimitMinutes > 0 && !log.OverallCapHit)
@@ -93,6 +95,15 @@ public class RulesEngine
                         actions.Add(new RuleAction(ActionKind.WarnFiveMinutes, rule.ProcessName,
                             rule.DisplayName, $"{rule.DisplayName} has ~{remaining:F0} minutes left today."));
                 }
+            }
+
+            // Break schedule check — uses TimeSinceBreakMinutes passed in via context
+            if (rule.HasBreakSchedule &&
+                breakTimers.TryGetValue(key, out var sinceBreak) &&
+                sinceBreak >= rule.BreakEveryMinutes)
+            {
+                actions.Add(new RuleAction(ActionKind.BreakDue, rule.ProcessName, rule.DisplayName,
+                    $"Break time! {rule.BreakDurationMinutes} min break required for {rule.DisplayName}."));
             }
         }
 

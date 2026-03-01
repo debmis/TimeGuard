@@ -46,19 +46,22 @@
                               SelectionMode="Single"
                               Margin="0,0,0,10">
                         <DataGrid.Columns>
-                            <DataGridCheckBoxColumn  Header="On"         Binding="{Binding Enabled}"              Width="40"/>
-                            <DataGridTextColumn      Header="App Name"   Binding="{Binding DisplayName}"          Width="*"/>
-                            <DataGridTextColumn      Header="Process"    Binding="{Binding ProcessName}"          Width="120"/>
-                            <DataGridTextColumn      Header="Limit (min)" Binding="{Binding DailyLimitMinutes}"   Width="90"/>
-                            <DataGridTextColumn      Header="From"       Binding="{Binding AllowedWindowStart}"   Width="70"/>
-                            <DataGridTextColumn      Header="To"         Binding="{Binding AllowedWindowEnd}"     Width="70"/>
+                            <DataGridCheckBoxColumn  Header="On"          Binding="{Binding Enabled}"              Width="40"/>
+                            <DataGridTextColumn      Header="App Name"    Binding="{Binding DisplayName}"          Width="*"/>
+                            <DataGridTextColumn      Header="Process"     Binding="{Binding ProcessName}"          Width="110"/>
+                            <DataGridTextColumn      Header="Limit (min)" Binding="{Binding DailyLimitMinutes}"    Width="80"/>
+                            <DataGridTextColumn      Header="From"        Binding="{Binding AllowedWindowStart}"   Width="60"/>
+                            <DataGridTextColumn      Header="To"          Binding="{Binding AllowedWindowEnd}"     Width="60"/>
+                            <DataGridTextColumn      Header="Break every" Binding="{Binding BreakEveryMinutes}"    Width="80"/>
+                            <DataGridTextColumn      Header="Break dur."  Binding="{Binding BreakDurationMinutes}" Width="75"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="➕ Add Rule"    Style="{StaticResource PrimaryButton}"   Margin="0,0,8,0" Click="OnAddRule"/>
-                        <Button Content="✏️ Edit"        Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OnEditRule"/>
-                        <Button Content="🗑️ Delete"      Style="{StaticResource SecondaryButton}" Click="OnDeleteRule"/>
+                        <Button Content="🔍 Pick Process" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OnPickProcess"/>
+                        <Button Content="➕ Add Rule"     Style="{StaticResource PrimaryButton}"   Margin="0,0,8,0" Click="OnAddRule"/>
+                        <Button Content="✏️ Edit"         Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OnEditRule"/>
+                        <Button Content="🗑️ Delete"       Style="{StaticResource SecondaryButton}" Click="OnDeleteRule"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -133,6 +136,7 @@
 
         <!-- Footer buttons -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="📊 Dashboard" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Click="OnViewDashboard"/>
             <Button Content="Save" Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Click="OnSave"/>
             <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Click="OnCancel"/>
         </StackPanel>

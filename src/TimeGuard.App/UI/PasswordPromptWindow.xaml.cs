@@ -2,31 +2,30 @@ using System.Windows;
 using System.Windows.Input;
 using TimeGuard.Helpers;
 using TimeGuard.Services;
+// Explicitly use WPF KeyEventArgs
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace TimeGuard.UI;
 
 public partial class PasswordPromptWindow : Window
 {
-    private readonly StorageService _storage;
+    private readonly DatabaseService _db;
 
     public PasswordPromptWindow()
     {
         InitializeComponent();
-        _storage = new StorageService();
+        _db = new DatabaseService();
         Loaded += (_, _) => PasswordBox.Focus();
     }
 
     private void OnUnlock(object sender, RoutedEventArgs e) => Verify();
-
-    private void OnKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter) Verify();
-    }
+    private void OnKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) Verify(); }
 
     private void Verify()
     {
-        var config = _storage.LoadConfig();
-        if (PasswordHelper.Verify(PasswordBox.Password, config.PasswordHash, config.PasswordSalt))
+        var hash = _db.GetSetting("PasswordHash") ?? string.Empty;
+        var salt = _db.GetSetting("PasswordSalt") ?? string.Empty;
+        if (PasswordHelper.Verify(PasswordBox.Password, hash, salt))
         {
             DialogResult = true;
             Close();

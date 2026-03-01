@@ -6,12 +6,12 @@ namespace TimeGuard.UI;
 
 public partial class FirstRunWindow : Window
 {
-    private readonly StorageService _storage;
+    private readonly DatabaseService _db;
 
-    public FirstRunWindow(StorageService storage)
+    public FirstRunWindow(DatabaseService db)
     {
         InitializeComponent();
-        _storage = storage;
+        _db = db;
         Loaded += (_, _) => PasswordBox.Focus();
     }
 
@@ -30,11 +30,9 @@ public partial class FirstRunWindow : Window
             return;
         }
 
-        var config = _storage.LoadConfig();
         var (hash, salt) = PasswordHelper.Hash(PasswordBox.Password);
-        config.PasswordHash = hash;
-        config.PasswordSalt = salt;
-        _storage.SaveConfig(config);
+        _db.SetSetting("PasswordHash", hash);
+        _db.SetSetting("PasswordSalt", salt);
 
         DialogResult = true;
         Close();

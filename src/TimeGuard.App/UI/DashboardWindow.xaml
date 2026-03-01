@@ -1,0 +1,52 @@
+<Window x:Class="TimeGuard.UI.DashboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:oxy="http://oxyplot.org/wpf"
+        Title="TimeGuard — Usage Dashboard"
+        Width="820" Height="560"
+        MinWidth="600" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource DarkBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="200"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="📊 Usage Dashboard"
+                   Foreground="{StaticResource TextBrush}"
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,16"/>
+
+        <!-- 7-day bar chart -->
+        <Border Grid.Row="1"
+                Background="{StaticResource SurfaceBrush}"
+                CornerRadius="8" Padding="8" Margin="0,0,0,16">
+            <oxy:PlotView x:Name="BarChart" Background="Transparent"/>
+        </Border>
+
+        <!-- Day drilldown header -->
+        <TextBlock Grid.Row="2" x:Name="DrilldownHeader"
+                   Text="Click a bar to see that day's breakdown"
+                   Foreground="{StaticResource SubtextBrush}"
+                   FontSize="12" Margin="0,0,0,8"/>
+
+        <!-- Drilldown table -->
+        <DataGrid Grid.Row="3" x:Name="DrilldownGrid"
+                  AutoGenerateColumns="False"
+                  Background="{StaticResource DarkBrush}"
+                  Foreground="{StaticResource TextBrush}"
+                  RowBackground="{StaticResource DarkBrush}"
+                  AlternatingRowBackground="{StaticResource SurfaceBrush}"
+                  BorderThickness="0" GridLinesVisibility="None"
+                  CanUserAddRows="False" IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="App"           Binding="{Binding ProcessName}"   Width="*"/>
+                <DataGridTextColumn Header="Used (min)"    Binding="{Binding UsageMins}"     Width="120"/>
+                <DataGridTextColumn Header="Blocked"       Binding="{Binding Blocked}"       Width="80"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
