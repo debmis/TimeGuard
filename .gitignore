@@ -1,0 +1,23 @@
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Build outputs
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# NuGet
+packages/
+
+# Published output
+publish/
+
+# App data (runtime files, not source)
+*.log

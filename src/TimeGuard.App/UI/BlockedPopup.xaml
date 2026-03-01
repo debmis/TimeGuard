@@ -1,0 +1,30 @@
+<Window x:Class="TimeGuard.UI.BlockedPopup"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Time's Up"
+        Width="380" Height="180"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        WindowStartupLocation="Manual">
+    <Border Background="{StaticResource DarkBrush}"
+            CornerRadius="12"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="2"
+            Padding="24">
+        <StackPanel>
+            <TextBlock Text="🛑 Time's up for today!"
+                       Foreground="{StaticResource AccentBrush}"
+                       FontSize="15" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock x:Name="MessageText"
+                       Foreground="{StaticResource TextBrush}"
+                       FontSize="13" TextWrapping="Wrap" Margin="0,0,0,18"/>
+            <Button Content="OK"
+                    Style="{StaticResource PrimaryButton}"
+                    HorizontalAlignment="Right"
+                    Click="OnOkClick"/>
+        </StackPanel>
+    </Border>
+</Window>

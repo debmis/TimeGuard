@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>TimeGuard</RootNamespace>
+    <AssemblyName>TimeGuard</AssemblyName>
+  </PropertyGroup>
+
+  <!-- App.xaml lives in UI/ subfolder; override its build action explicitly -->
+  <ItemGroup>
+    <Page Remove="UI\App.xaml" />
+    <ApplicationDefinition Include="UI\App.xaml">
+      <DependentUpon>App.xaml.cs</DependentUpon>
+    </ApplicationDefinition>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TimeGuard.Core\TimeGuard.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,53 @@
+<Window x:Class="TimeGuard.UI.RuleEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Edit App Rule"
+        Width="380" Height="340"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource DarkBrush}">
+    <StackPanel Margin="24">
+        <TextBlock Text="App Display Name:" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+        <TextBox x:Name="DisplayNameBox" Background="{StaticResource SurfaceBrush}"
+                 Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                 Padding="8,5" Margin="0,0,0,12"/>
+
+        <TextBlock Text="Process Name (without .exe):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+        <TextBox x:Name="ProcessNameBox" Background="{StaticResource SurfaceBrush}"
+                 Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                 Padding="8,5" Margin="0,0,0,12"/>
+
+        <TextBlock Text="Daily Limit (minutes, 0 = no limit):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+        <TextBox x:Name="LimitBox" Background="{StaticResource SurfaceBrush}"
+                 Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                 Padding="8,5" Margin="0,0,0,12"/>
+
+        <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Allowed From (HH:mm):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="WindowStartBox" Background="{StaticResource SurfaceBrush}"
+                         Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                         Padding="8,5"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="Allowed Until (HH:mm):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="WindowEndBox" Background="{StaticResource SurfaceBrush}"
+                         Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                         Padding="8,5"/>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock x:Name="ErrorText" Foreground="{StaticResource AccentBrush}" FontSize="11"
+                   Margin="0,0,0,10" Visibility="Collapsed"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Save" Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Click="OnSave"/>
+            <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Click="OnCancel"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -1,0 +1,37 @@
+<Application x:Class="TimeGuard.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <!-- Base colors -->
+        <SolidColorBrush x:Key="AccentBrush"     Color="#E05A2B"/>
+        <SolidColorBrush x:Key="DarkBrush"       Color="#1E1E2E"/>
+        <SolidColorBrush x:Key="SurfaceBrush"    Color="#2A2A3E"/>
+        <SolidColorBrush x:Key="TextBrush"       Color="#F0F0F0"/>
+        <SolidColorBrush x:Key="SubtextBrush"    Color="#A0A0B8"/>
+
+        <Style TargetType="Button" x:Key="PrimaryButton">
+            <Setter Property="Background"   Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground"   Value="White"/>
+            <Setter Property="FontWeight"   Value="SemiBold"/>
+            <Setter Property="Padding"      Value="16,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor"       Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Button" x:Key="SecondaryButton" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        </Style>
+    </Application.Resources>
+</Application>
