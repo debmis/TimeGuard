@@ -32,6 +32,114 @@
 
         <Style TargetType="Button" x:Key="SecondaryButton" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        </Style>
+
+        <!-- TabControl: remove default white border/background -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background"       Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush"      Value="#3A3A52"/>
+            <Setter Property="BorderThickness"  Value="1"/>
+            <Setter Property="Padding"          Value="0"/>
+        </Style>
+
+        <!-- TabItem: styled dark with accent on selection -->
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground"    Value="{StaticResource SubtextBrush}"/>
+            <Setter Property="FontSize"      Value="13"/>
+            <Setter Property="FontWeight"    Value="SemiBold"/>
+            <Setter Property="Padding"       Value="16,8"/>
+            <Setter Property="Background"    Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder"
+                                Background="Transparent"
+                                BorderThickness="0,0,0,3"
+                                BorderBrush="Transparent"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="BorderBrush"   Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Foreground"                           Value="{StaticResource TextBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid column headers: dark with readable text -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background"       Value="#252535"/>
+            <Setter Property="Foreground"       Value="{StaticResource SubtextBrush}"/>
+            <Setter Property="FontSize"         Value="11"/>
+            <Setter Property="FontWeight"       Value="SemiBold"/>
+            <Setter Property="Padding"          Value="8,6"/>
+            <Setter Property="BorderThickness"  Value="0"/>
+            <Setter Property="SeparatorBrush"   Value="#3A3A52"/>
+        </Style>
+
+        <!-- DataGrid rows: remove default focus rectangle ugliness -->
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#3A3A5A"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2F2F4A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Foreground"       Value="{StaticResource TextBrush}"/>
+            <Setter Property="BorderThickness"  Value="0"/>
+            <Setter Property="Padding"          Value="4,2"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- TextBox: dark themed -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background"   Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="Foreground"   Value="{StaticResource TextBrush}"/>
+            <Setter Property="CaretBrush"   Value="{StaticResource TextBrush}"/>
+            <Setter Property="BorderBrush"  Value="#3A3A52"/>
+            <Setter Property="Padding"      Value="6,4"/>
+        </Style>
+
+        <!-- PasswordBox: dark themed -->
+        <Style TargetType="PasswordBox">
+            <Setter Property="Background"   Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="Foreground"   Value="{StaticResource TextBrush}"/>
+            <Setter Property="CaretBrush"   Value="{StaticResource TextBrush}"/>
+            <Setter Property="BorderBrush"  Value="#3A3A52"/>
+            <Setter Property="Padding"      Value="6,4"/>
+        </Style>
+
+        <!-- CheckBox: white mark on dark -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        </Style>
+
+        <!-- Separator -->
+        <Style TargetType="Separator">
+            <Setter Property="Background" Value="#3A3A52"/>
         </Style>
     </Application.Resources>
 </Application>

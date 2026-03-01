@@ -26,7 +26,7 @@
                     BorderBrush="Transparent">
 
             <!-- Rules Tab -->
-            <TabItem Header="App Rules" Foreground="{StaticResource TextBrush}">
+            <TabItem Header="App Rules">
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -67,7 +67,7 @@
             </TabItem>
 
             <!-- Global Cap Tab -->
-            <TabItem Header="Daily Cap" Foreground="{StaticResource TextBrush}">
+            <TabItem Header="Daily Cap">
                 <StackPanel Margin="20">
                     <TextBlock Text="Overall daily screen time cap (across all monitored apps)"
                                Foreground="{StaticResource SubtextBrush}" FontSize="12" Margin="0,0,0,10"/>
@@ -85,7 +85,7 @@
             </TabItem>
 
             <!-- Usage History Tab -->
-            <TabItem Header="Today's Usage" Foreground="{StaticResource TextBrush}">
+            <TabItem Header="Today's Usage">
                 <DataGrid x:Name="UsageGrid"
                           Margin="12"
                           AutoGenerateColumns="False"
@@ -106,7 +106,7 @@
             </TabItem>
 
             <!-- Security Tab -->
-            <TabItem Header="Security" Foreground="{StaticResource TextBrush}">
+            <TabItem Header="Security">
                 <StackPanel Margin="20">
                     <TextBlock Text="Change password" Foreground="{StaticResource TextBrush}" FontWeight="Bold" Margin="0,0,0,12"/>
                     <TextBlock Text="New password:" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
