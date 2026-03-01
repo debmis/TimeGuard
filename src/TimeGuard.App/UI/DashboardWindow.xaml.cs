@@ -1,5 +1,6 @@
 using OxyPlot;
 using OxyPlot.Axes;
+using OxyPlot.Legends;
 using OxyPlot.Series;
 using System.Linq;
 using System.Windows;
@@ -27,43 +28,52 @@ public partial class DashboardWindow : Window
 
         var model = new PlotModel
         {
-            Background     = OxyColors.Transparent,
-            TextColor      = OxyColor.FromRgb(240, 240, 240),
+            Background          = OxyColors.Transparent,
+            TextColor           = OxyColor.FromRgb(240, 240, 240),
             PlotAreaBorderColor = OxyColor.FromRgb(60, 60, 80)
         };
 
-        // X axis — dates
-        var dates = _chartData.Select(r => r.Date).Distinct().OrderBy(d => d).ToList();
-        var xAxis = new CategoryAxis
+        model.Legends.Add(new Legend
         {
-            Position          = AxisPosition.Bottom,
-            ItemsSource       = dates.Select(d => d.ToString("MMM d")).ToList(),
-            TextColor         = OxyColor.FromRgb(160, 160, 184),
-            TicklineColor     = OxyColors.Transparent,
-            MajorGridlineStyle= LineStyle.None
-        };
-        model.Axes.Add(xAxis);
+            LegendTextColor       = OxyColor.FromRgb(160, 160, 184),
+            LegendBackground      = OxyColors.Transparent,
+            LegendBorderThickness = 0
+        });
 
-        var yAxis = new LinearAxis
+        // Y axis — dates as categories (BarSeries in OxyPlot 2.x requires CategoryAxis on Left)
+        var dates = _chartData.Select(r => r.Date).Distinct().OrderBy(d => d).ToList();
+        var yAxis = new CategoryAxis
         {
-            Position          = AxisPosition.Left,
-            Title             = "Minutes",
-            TitleColor        = OxyColor.FromRgb(160, 160, 184),
-            TextColor         = OxyColor.FromRgb(160, 160, 184),
-            MajorGridlineStyle= LineStyle.Dot,
-            MajorGridlineColor= OxyColor.FromRgb(60, 60, 80),
-            TicklineColor     = OxyColors.Transparent,
-            Minimum           = 0
+            Position           = AxisPosition.Left,
+            ItemsSource        = dates.Select(d => d.ToString("MMM d")).ToList(),
+            TextColor          = OxyColor.FromRgb(160, 160, 184),
+            TicklineColor      = OxyColors.Transparent,
+            MajorGridlineStyle = LineStyle.None,
+            GapWidth           = 0.3
         };
         model.Axes.Add(yAxis);
 
-        // One series per app
+        // X axis — minutes
+        var xAxis = new LinearAxis
+        {
+            Position           = AxisPosition.Bottom,
+            Title              = "Minutes",
+            TitleColor         = OxyColor.FromRgb(160, 160, 184),
+            TextColor          = OxyColor.FromRgb(160, 160, 184),
+            MajorGridlineStyle = LineStyle.Dot,
+            MajorGridlineColor = OxyColor.FromRgb(60, 60, 80),
+            TicklineColor      = OxyColors.Transparent,
+            Minimum            = 0
+        };
+        model.Axes.Add(xAxis);
+
+        // One ColumnSeries per app (vertical bars, categories on X)
         var apps = _chartData.Select(r => r.ProcessName).Distinct().OrderBy(x => x).ToList();
         var palette = new[]
         {
-            OxyColor.FromRgb(224, 90, 43),
-            OxyColor.FromRgb(86, 156, 214),
-            OxyColor.FromRgb(78, 201, 176),
+            OxyColor.FromRgb(224, 90,  43),
+            OxyColor.FromRgb(86,  156, 214),
+            OxyColor.FromRgb(78,  201, 176),
             OxyColor.FromRgb(220, 220, 100),
             OxyColor.FromRgb(180, 100, 220)
         };
@@ -89,23 +99,15 @@ public partial class DashboardWindow : Window
             model.Series.Add(series);
         }
 
-        // Click to drilldown
+        // Click to drilldown — map click Y position to date index via category axis
         model.MouseDown += (s, e) =>
         {
             if (e.ChangedButton != OxyMouseButton.Left) return;
-            var results = model.HitTest(new HitTestArguments(e.Position, 10));
-            var hit     = results?.FirstOrDefault();
-            if (hit?.Element is BarSeries bs)
-            {
-                // Determine which bar was clicked from y-axis category index
-                var catAxis = model.Axes.OfType<CategoryAxis>().FirstOrDefault();
-                if (catAxis != null)
-                {
-                    var catIdx = (int)Math.Round(catAxis.InverseTransform(e.Position.Y));
-                    if (catIdx >= 0 && catIdx < dates.Count)
-                        Dispatcher.Invoke(() => LoadDrilldown(dates[catIdx]));
-                }
-            }
+            var catAxis = model.Axes.OfType<CategoryAxis>().FirstOrDefault();
+            if (catAxis == null) return;
+            var catIdx = (int)Math.Round(catAxis.InverseTransform(e.Position.Y));
+            if (catIdx >= 0 && catIdx < dates.Count)
+                Dispatcher.Invoke(() => LoadDrilldown(dates[catIdx]));
         };
 
         BarChart.Model = model;
