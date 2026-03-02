@@ -35,7 +35,7 @@ public partial class DashboardWindow : Window
 
         model.Legends.Add(new Legend
         {
-            LegendTextColor       = OxyColor.FromRgb(160, 160, 184),
+            LegendTextColor       = OxyColor.FromRgb(210, 210, 225),
             LegendBackground      = OxyColors.Transparent,
             LegendBorderThickness = 0
         });
@@ -77,7 +77,7 @@ public partial class DashboardWindow : Window
             OxyColor.FromRgb(220, 220, 100),
             OxyColor.FromRgb(180, 100, 220)
         };
-        var passiveColor = OxyColor.FromRgb(80, 80, 100);
+        var passiveColor = OxyColor.FromRgb(130, 130, 160);
 
         int ruledIdx = 0;
         for (int i = 0; i < apps.Count; i++)
