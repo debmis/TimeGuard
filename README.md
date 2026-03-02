@@ -39,18 +39,27 @@ TimeGuard/
     └── TimeGuard.Tests/      # xUnit tests for RulesEngine + DatabaseService
 ```
 
-## Download (Pre-built)
+## Download & Install
 
-A pre-built framework-dependent release is in the [`release/`](release/) folder:
+### ⬇️ [Download TimeGuard-win-x64.zip](https://github.com/debmis/TimeGuard/raw/master/release/TimeGuard-win-x64.zip)
 
-| File | Notes |
-|---|---|
-| `TimeGuard.exe` | Main application |
-| `e_sqlite3.dll` | Native SQLite library — must stay in the same folder as the exe |
+**Requirements:** [.NET 8 Desktop Runtime (Windows x64)](https://dotnet.microsoft.com/download/dotnet/8.0) must be installed on the target machine.
 
-**Requirement:** [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) must be installed on the target machine.
+### Installation steps
 
-> To build a fully self-contained exe (no .NET required): `dotnet publish src/TimeGuard.App -r win-x64 --self-contained -p:PublishSingleFile=true -o publish/`
+1. Install **.NET 8 Desktop Runtime** from the link above (one-time, free)
+2. Download **TimeGuard-win-x64.zip** and extract it to a permanent folder, e.g.:
+   ```
+   C:\Program Files\TimeGuard\
+   ```
+3. Run **TimeGuard.exe** — a setup wizard will appear to set your parent password
+4. Done — TimeGuard registers itself to **start automatically with Windows** and runs silently in the background
+
+> ⚠️ Choose your permanent folder *before* first run. Moving the exe later breaks the Windows auto-start entry (re-register via Settings → Security tab).
+
+### Opening Settings
+
+Press **Ctrl + Alt + Shift + G** at any time to open the parent settings panel (password required).
 
 ## Build & Run
 
