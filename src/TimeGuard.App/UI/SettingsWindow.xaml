@@ -29,8 +29,9 @@
             <TabItem Header="App Rules">
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*" MinHeight="80"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="120"/>
                     </Grid.RowDefinitions>
 
                     <DataGrid x:Name="RulesGrid"
@@ -63,6 +64,42 @@
                         <Button Content="✏️ Edit"         Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OnEditRule"/>
                         <Button Content="🗑️ Delete"       Style="{StaticResource SecondaryButton}" Click="OnDeleteRule"/>
                     </StackPanel>
+
+                    <!-- Recently Seen (no rule) -->
+                    <Grid Grid.Row="2" Margin="0,12,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Recently Seen (no rule)" Grid.Row="0"
+                                   Foreground="{StaticResource SubtextBrush}"
+                                   FontSize="11" FontWeight="SemiBold"
+                                   Margin="0,0,0,6"/>
+                        <DataGrid x:Name="RecentGrid" Grid.Row="1"
+                                  AutoGenerateColumns="False"
+                                  Background="{StaticResource DarkBrush}"
+                                  Foreground="{StaticResource TextBrush}"
+                                  RowBackground="{StaticResource DarkBrush}"
+                                  AlternatingRowBackground="{StaticResource SurfaceBrush}"
+                                  BorderThickness="0" GridLinesVisibility="None"
+                                  CanUserAddRows="False" IsReadOnly="True"
+                                  MinHeight="60">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Process" Binding="{Binding}" Width="*"/>
+                                <DataGridTemplateColumn Header="" Width="100">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Add Rule →"
+                                                    Style="{StaticResource SecondaryButton}"
+                                                    Padding="8,4"
+                                                    Tag="{Binding}"
+                                                    Click="OnPromoteRecentProcess"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
                 </Grid>
             </TabItem>
 

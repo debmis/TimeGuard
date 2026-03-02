@@ -36,6 +36,7 @@ public sealed class MonitorService : IDisposable
         _rules  = rules;
         _config = config;
         _log    = db.LoadTodayLog();
+        db.PurgeOldPassiveSessions(7);
     }
 
     public void Start() => Task.Run(() => RunLoop(_cts.Token));
@@ -70,15 +71,16 @@ public sealed class MonitorService : IDisposable
                     lastDate = today;
                 }
 
-                var runningNames = GetMonitoredRunningProcessNames();
-                var now          = TimeOnly.FromDateTime(DateTime.Now);
+                var runningNames    = GetAllWindowedProcessNames();
+                var ruledRunning    = runningNames.Keys.Where(n => IsRuledProcess(n)).ToList();
+                var now             = TimeOnly.FromDateTime(DateTime.Now);
 
                 AccumulateUsage(runningNames);
 
                 var breakTimers = _sessions.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value.TimeSinceBreak);
-                var actions = _rules.Evaluate(runningNames, _log, _config, now, breakTimers);
+                var actions = _rules.Evaluate(ruledRunning, _log, _config, now, breakTimers);
 
                 foreach (var action in actions)
                 {
@@ -104,7 +106,7 @@ public sealed class MonitorService : IDisposable
                     }
                 }
 
-                foreach (var (procName, displayName) in _rules.GetRelaunched(runningNames, _log, _config))
+                foreach (var (procName, displayName) in _rules.GetRelaunched(ruledRunning, _log, _config))
                     BlockRequested?.Invoke(procName, displayName);
 
                 _log.TotalUsageMinutes = _log.Entries.Sum(e => e.UsageMinutes);
@@ -123,33 +125,47 @@ public sealed class MonitorService : IDisposable
         }
     }
 
-    private IReadOnlyList<string> GetMonitoredRunningProcessNames()
+    private Dictionary<string, string> GetAllWindowedProcessNames()
     {
-        var monitored = new HashSet<string>(
-            _config.Rules.Where(r => r.Enabled)
-                         .Select(r => r.ProcessName.ToLowerInvariant()));
-
+        // Returns processName (lowercase) → windowTitle for all visible windowed apps
         return Process.GetProcesses()
-            .Select(p => p.ProcessName.ToLowerInvariant())
-            .Where(monitored.Contains)
-            .Distinct()
-            .ToList();
+            .Where(p => !string.IsNullOrWhiteSpace(p.MainWindowTitle))
+            .GroupBy(p => p.ProcessName.ToLowerInvariant())
+            .ToDictionary(
+                g => g.Key,
+                g => g.First().MainWindowTitle);
     }
 
-    private void AccumulateUsage(IReadOnlyList<string> runningNames)
+    private bool IsRuledProcess(string processNameLower) =>
+        _config.Rules.Any(r => r.Enabled && r.ProcessName.ToLowerInvariant() == processNameLower);
+
+    private void AccumulateUsage(Dictionary<string, string> running)
     {
-        var runningSet = new HashSet<string>(runningNames);
         var today      = DateOnly.FromDateTime(DateTime.Now);
 
-        foreach (var name in runningNames)
+        // Open new sessions for newly-seen processes
+        foreach (var (name, title) in running)
+        {
             if (!_sessions.ContainsKey(name))
-                _sessions[name] = (_db.OpenSession(name), 0);
+            {
+                var isPassive = !IsRuledProcess(name);
+                var sessionId = _db.OpenSession(name, title, isPassive);
+                _sessions[name] = (sessionId, 0);
+            }
+            else
+            {
+                // Update window title on each tick (keep last seen)
+                _db.UpdateSessionTitle(_sessions[name].SessionId, title);
+            }
+        }
 
+        // Close sessions for processes that stopped
         foreach (var name in _sessions.Keys.ToList())
-            if (!runningSet.Contains(name))
+            if (!running.ContainsKey(name))
                 CloseSession(name);
 
-        foreach (var name in runningNames)
+        // Accumulate usage time
+        foreach (var (name, _) in running)
         {
             if (_log.IsBlocked(name)) continue;
 
@@ -160,7 +176,8 @@ public sealed class MonitorService : IDisposable
             {
                 var newBreak = s.TimeSinceBreak + PollMinutes;
                 _sessions[name] = (s.SessionId, newBreak);
-                _db.UpdateSession(s.SessionId, newBreak);
+                if (IsRuledProcess(name))
+                    _db.UpdateSession(s.SessionId, newBreak);
             }
 
             _db.UpsertUsageEntry(today, entry);

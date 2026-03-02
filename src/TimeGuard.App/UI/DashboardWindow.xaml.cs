@@ -11,9 +11,9 @@ namespace TimeGuard.UI;
 public partial class DashboardWindow : Window
 {
     private readonly DatabaseService _db;
-    private IReadOnlyList<(DateOnly Date, string ProcessName, double UsageMins)> _chartData = [];
+    private IReadOnlyList<(DateOnly Date, string ProcessName, double UsageMins, bool IsPassive)> _chartData = [];
 
-    private record DrillRow(string ProcessName, string UsageMins, bool Blocked);
+    private record DrillRow(string ProcessName, string WindowTitle, string Start, string End, string Duration);
 
     public DashboardWindow(DatabaseService db)
     {
@@ -77,14 +77,19 @@ public partial class DashboardWindow : Window
             OxyColor.FromRgb(220, 220, 100),
             OxyColor.FromRgb(180, 100, 220)
         };
+        var passiveColor = OxyColor.FromRgb(80, 80, 100);
 
+        int ruledIdx = 0;
         for (int i = 0; i < apps.Count; i++)
         {
-            var app    = apps[i];
+            var app       = apps[i];
+            var isPassive = _chartData.Any(r => r.ProcessName == app && r.IsPassive);
+            var color     = isPassive ? passiveColor : palette[ruledIdx++ % palette.Length];
+
             var series = new BarSeries
             {
-                Title           = app,
-                FillColor       = palette[i % palette.Length],
+                Title           = isPassive ? $"{app} (untracked)" : app,
+                FillColor       = color,
                 StrokeThickness = 0
             };
 
@@ -116,9 +121,9 @@ public partial class DashboardWindow : Window
     private void LoadDrilldown(DateOnly date)
     {
         DrilldownHeader.Text = $"📅 {date:dddd, MMMM d, yyyy}";
-        var log = _db.LoadLog(date);
-        DrilldownGrid.ItemsSource = log.Entries
-            .Select(e => new DrillRow(e.ProcessName, $"{e.UsageMinutes:F1}", e.Blocked))
+        var sessions = _db.LoadSessionsForDay(date);
+        DrilldownGrid.ItemsSource = sessions
+            .Select(s => new DrillRow(s.ProcessName, s.WindowTitle, s.StartDisplay, s.EndDisplay, s.DurationDisplay))
             .ToList();
     }
 }

@@ -43,9 +43,11 @@
                   BorderThickness="0" GridLinesVisibility="None"
                   CanUserAddRows="False" IsReadOnly="True">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="App"           Binding="{Binding ProcessName}"   Width="*"/>
-                <DataGridTextColumn Header="Used (min)"    Binding="{Binding UsageMins}"     Width="120"/>
-                <DataGridTextColumn Header="Blocked"       Binding="{Binding Blocked}"       Width="80"/>
+                <DataGridTextColumn Header="App"          Binding="{Binding ProcessName}"  Width="110"/>
+                <DataGridTextColumn Header="Window Title" Binding="{Binding WindowTitle}"  Width="*"/>
+                <DataGridTextColumn Header="Start"        Binding="{Binding Start}"        Width="60"/>
+                <DataGridTextColumn Header="End"          Binding="{Binding End}"          Width="60"/>
+                <DataGridTextColumn Header="Duration"     Binding="{Binding Duration}"     Width="80"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

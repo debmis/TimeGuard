@@ -177,14 +177,14 @@ public class DatabaseService
 
     // ── Sessions ──────────────────────────────────────────────────────────────
 
-    public int OpenSession(string processName)
+    public int OpenSession(string processName, string windowTitle = "", bool isPassive = false)
     {
         using var conn = Open();
         return conn.QuerySingle<int>("""
-            INSERT INTO Sessions(ProcessName, StartTime, TimeSinceBreakMins)
-            VALUES(@processName, @startTime, 0);
+            INSERT INTO Sessions(ProcessName, StartTime, TimeSinceBreakMins, WindowTitle, IsPassive)
+            VALUES(@processName, @startTime, 0, @windowTitle, @isPassive);
             SELECT last_insert_rowid();
-            """, new { processName, startTime = DateTime.Now.ToString("o") });
+            """, new { processName, startTime = DateTime.Now.ToString("o"), windowTitle, isPassive = isPassive ? 1 : 0 });
     }
 
     public void UpdateSession(int sessionId, double timeSinceBreakMins)
@@ -194,6 +194,13 @@ public class DatabaseService
             UPDATE Sessions SET TimeSinceBreakMins = @timeSinceBreakMins
             WHERE Id = @sessionId
             """, new { sessionId, timeSinceBreakMins });
+    }
+
+    public void UpdateSessionTitle(int sessionId, string windowTitle)
+    {
+        using var conn = Open();
+        conn.Execute("UPDATE Sessions SET WindowTitle = @windowTitle WHERE Id = @sessionId",
+            new { sessionId, windowTitle });
     }
 
     public void CloseSession(int sessionId, double timeSinceBreakMins = 0)
@@ -224,18 +231,67 @@ public class DatabaseService
     }
 
     /// <summary>Returns per-app daily totals for the last N days, for chart rendering.</summary>
-    public IReadOnlyList<(DateOnly Date, string ProcessName, double UsageMins)> LoadChartData(int days = 7)
+    public IReadOnlyList<(DateOnly Date, string ProcessName, double UsageMins, bool IsPassive)> LoadChartData(int days = 7)
     {
         using var conn  = Open();
         var cutoff = DateOnly.FromDateTime(DateTime.Now).AddDays(-(days - 1))
                              .ToString("yyyy-MM-dd");
-        return conn.Query<(string Date, string ProcessName, double UsageMins)>("""
-            SELECT Date, ProcessName, UsageMins
-            FROM DailyUsage
-            WHERE Date >= @cutoff AND UsageMins > 0
-            ORDER BY Date, ProcessName
+        // Join with AppRules to determine if a process has a rule
+        return conn.Query<(string Date, string ProcessName, double UsageMins, int IsPassive)>("""
+            SELECT d.Date, d.ProcessName, d.UsageMins,
+                   CASE WHEN r.ProcessName IS NULL THEN 1 ELSE 0 END AS IsPassive
+            FROM DailyUsage d
+            LEFT JOIN AppRules r ON lower(r.ProcessName) = lower(d.ProcessName) AND r.Enabled = 1
+            WHERE d.Date >= @cutoff AND d.UsageMins > 0
+            ORDER BY d.Date, d.ProcessName
             """, new { cutoff })
-            .Select(r => (DateOnly.Parse(r.Date), r.ProcessName, r.UsageMins))
+            .Select(r => (DateOnly.Parse(r.Date), r.ProcessName, r.UsageMins, r.IsPassive == 1))
             .ToList();
+    }
+
+    /// <summary>Returns all sessions that started or were active on the given date, ordered by start time.</summary>
+    public IReadOnlyList<SessionSegment> LoadSessionsForDay(DateOnly date)
+    {
+        using var conn = Open();
+        var dateStr     = date.ToString("yyyy-MM-dd");
+        var nextDateStr = date.AddDays(1).ToString("yyyy-MM-dd");
+        return conn.Query<SessionSegment>("""
+            SELECT ProcessName,
+                   COALESCE(WindowTitle, '') AS WindowTitle,
+                   StartTime,
+                   COALESCE(EndTime, @nextDateStr) AS EndTime,
+                   IsPassive
+            FROM Sessions
+            WHERE substr(StartTime, 1, 10) = @dateStr
+               OR (substr(StartTime, 1, 10) < @dateStr AND (EndTime IS NULL OR substr(EndTime, 1, 10) >= @dateStr))
+            ORDER BY StartTime
+            """, new { dateStr, nextDateStr }).ToList();
+    }
+
+    /// <summary>Deletes passive sessions older than the given number of days.</summary>
+    public void PurgeOldPassiveSessions(int days = 7)
+    {
+        using var conn = Open();
+        var cutoff = DateTime.Now.AddDays(-days).ToString("o");
+        conn.Execute("""
+            DELETE FROM Sessions
+            WHERE IsPassive = 1 AND StartTime < @cutoff
+            """, new { cutoff });
+    }
+
+    /// <summary>Returns distinct process names seen in Sessions within the last N days (excluding ruled apps).</summary>
+    public IReadOnlyList<string> GetRecentlySeenProcesses(int days = 7)
+    {
+        using var conn = Open();
+        var cutoff = DateTime.Now.AddDays(-days).ToString("o");
+        return conn.Query<string>("""
+            SELECT DISTINCT lower(s.ProcessName)
+            FROM Sessions s
+            WHERE s.IsPassive = 1 AND s.StartTime >= @cutoff
+              AND NOT EXISTS (
+                  SELECT 1 FROM AppRules r WHERE lower(r.ProcessName) = lower(s.ProcessName)
+              )
+            ORDER BY 1
+            """, new { cutoff }).ToList();
     }
 }

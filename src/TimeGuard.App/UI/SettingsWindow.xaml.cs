@@ -31,6 +31,11 @@ public partial class SettingsWindow : Window
     {
         _rules = new ObservableCollection<AppRule>(_db.GetRules());
         RulesGrid.ItemsSource = _rules;
+
+        var recent = _db.GetRecentlySeenProcesses(7);
+        RecentGrid.ItemsSource = recent;
+        // Hide the section if nothing to show
+        RecentGrid.Visibility = recent.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnAddRule(object sender, RoutedEventArgs e)
@@ -63,6 +68,25 @@ public partial class SettingsWindow : Window
         {
             _db.DeleteRule(selected.Id);
             LoadRules();
+        }
+    }
+
+    private void OnPromoteRecentProcess(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string processName })
+        {
+            var rule = new AppRule
+            {
+                ProcessName = processName,
+                DisplayName = processName,
+                Enabled     = true
+            };
+            var dialog = new RuleEditWindow(rule);
+            if (dialog.ShowDialog() == true && dialog.Result is not null)
+            {
+                _db.SaveRule(dialog.Result);
+                LoadRules();
+            }
         }
     }
 

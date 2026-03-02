@@ -154,6 +154,74 @@ public class DatabaseServiceTests : IDisposable
         Assert.Same(e1, e2);
     }
 
+    // ── Passive session tracking ──────────────────────────────────────────────
+
+    [Fact]
+    public void PassiveSession_StoredAndRetrieved()
+    {
+        var svc       = CreateSvc();
+        var sessionId = svc.OpenSession("notepad", "Untitled - Notepad", isPassive: true);
+        svc.CloseSession(sessionId);
+
+        var today    = DateOnly.FromDateTime(DateTime.Now);
+        var segments = svc.LoadSessionsForDay(today);
+
+        Assert.Single(segments);
+        Assert.Equal("notepad",               segments[0].ProcessName);
+        Assert.Equal("Untitled - Notepad",    segments[0].WindowTitle);
+        Assert.Equal(1,                       segments[0].IsPassive);
+    }
+
+    [Fact]
+    public void UpdateSessionTitle_UpdatesTitle()
+    {
+        var svc       = CreateSvc();
+        var sessionId = svc.OpenSession("chrome", "New Tab", isPassive: true);
+        svc.UpdateSessionTitle(sessionId, "YouTube - Chrome");
+        svc.CloseSession(sessionId);
+
+        var segments = svc.LoadSessionsForDay(DateOnly.FromDateTime(DateTime.Now));
+        Assert.Equal("YouTube - Chrome", segments[0].WindowTitle);
+    }
+
+    [Fact]
+    public void PurgeOldPassiveSessions_RemovesOldRows()
+    {
+        var svc = CreateSvc();
+        // Manually insert an old passive session via ADO.NET
+        using var conn = new Microsoft.Data.Sqlite.SqliteConnection(_connString);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO Sessions(ProcessName, StartTime, EndTime, TimeSinceBreakMins, WindowTitle, IsPassive)
+            VALUES('oldapp', @old, @old, 0, 'Old App', 1)
+            """;
+        cmd.Parameters.AddWithValue("@old", DateTime.Now.AddDays(-10).ToString("o"));
+        cmd.ExecuteNonQuery();
+
+        svc.PurgeOldPassiveSessions(7);
+
+        var segments = svc.LoadSessionsForDay(DateOnly.FromDateTime(DateTime.Now.AddDays(-10)));
+        Assert.Empty(segments);
+    }
+
+    [Fact]
+    public void GetRecentlySeenProcesses_ReturnsPassiveOnly()
+    {
+        var svc = CreateSvc();
+        // Add a rule for chrome
+        svc.SaveRule(new AppRule { ProcessName = "chrome", DisplayName = "Chrome", Enabled = true });
+
+        svc.OpenSession("chrome",  "YouTube",        isPassive: false);
+        svc.OpenSession("notepad", "Untitled",        isPassive: true);
+        svc.OpenSession("mspaint", "Untitled - Paint",isPassive: true);
+
+        var recent = svc.GetRecentlySeenProcesses(7);
+        Assert.DoesNotContain("chrome",  recent);
+        Assert.Contains("notepad",  recent);
+        Assert.Contains("mspaint",  recent);
+    }
+
     public void Dispose()
     {
         try { File.Delete(_dbPath); } catch { }

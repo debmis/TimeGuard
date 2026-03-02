@@ -66,6 +66,10 @@ public class DatabaseMigrator
             CREATE INDEX IF NOT EXISTS idx_dailyusage_date ON DailyUsage(Date);
             CREATE INDEX IF NOT EXISTS idx_sessions_process ON Sessions(ProcessName, EndTime);
         """);
+
+        // Phase 3 migrations — idempotent
+        AddColumnIfMissing(conn, "Sessions", "WindowTitle", "TEXT");
+        AddColumnIfMissing(conn, "Sessions", "IsPassive",   "INTEGER NOT NULL DEFAULT 0");
     }
 
     // Private helper — avoids a dependency on Dapper inside the migrator
@@ -74,5 +78,14 @@ public class DatabaseMigrator
         using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         cmd.ExecuteNonQuery();
+    }
+
+    private static void AddColumnIfMissing(SqliteConnection conn, string table, string column, string definition)
+    {
+        using var check = conn.CreateCommand();
+        check.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = '{column}'";
+        var exists = (long)(check.ExecuteScalar() ?? 0L);
+        if (exists == 0)
+            Execute(conn, $"ALTER TABLE {table} ADD COLUMN {column} {definition}");
     }
 }
