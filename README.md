@@ -39,6 +39,19 @@ TimeGuard/
     └── TimeGuard.Tests/      # xUnit tests for RulesEngine + DatabaseService
 ```
 
+## Download (Pre-built)
+
+A pre-built framework-dependent release is in the [`release/`](release/) folder:
+
+| File | Notes |
+|---|---|
+| `TimeGuard.exe` | Main application |
+| `e_sqlite3.dll` | Native SQLite library — must stay in the same folder as the exe |
+
+**Requirement:** [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) must be installed on the target machine.
+
+> To build a fully self-contained exe (no .NET required): `dotnet publish src/TimeGuard.App -r win-x64 --self-contained -p:PublishSingleFile=true -o publish/`
+
 ## Build & Run
 
 ```bash

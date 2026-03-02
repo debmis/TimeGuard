@@ -8,6 +8,9 @@ Desktop.ini
 [Bb]in/
 [Oo]bj/
 
+# But track the top-level release/ distribution folder
+!release/
+
 # Visual Studio
 .vs/
 *.user
@@ -16,8 +19,11 @@ Desktop.ini
 # NuGet
 packages/
 
-# Published output
+# Published output (temp folder)
 publish/
+
+# Release folder is tracked (framework-dependent build for distribution)
+# release/ is intentionally NOT ignored
 
 # App data (runtime files, not source)
 *.log
