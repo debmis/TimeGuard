@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
 using TimeGuard.Helpers;
 using TimeGuard.Models;
 using TimeGuard.Services;
@@ -32,10 +34,70 @@ public partial class SettingsWindow : Window
         _rules = new ObservableCollection<AppRule>(_db.GetRules());
         RulesGrid.ItemsSource = _rules;
 
-        var recent = _db.GetRecentlySeenProcesses(7);
-        RecentGrid.ItemsSource = recent;
-        // Hide the section if nothing to show
-        RecentGrid.Visibility = recent.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        BuildRecentPanel(_db.GetRecentlySeenProcesses(7));
+    }
+
+    private void BuildRecentPanel(IReadOnlyList<string> recent)
+    {
+        RecentPanel.Children.Clear();
+
+        // Always show at least a test entry so the UI can be verified
+        var items = recent.Count > 0 ? recent : new[] { "[test] no-recent-sessions" };
+
+        foreach (var proc in items)
+        {
+            var row = new System.Windows.Controls.Grid();
+            row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition
+                { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition
+                { Width = new GridLength(100) });
+
+            var label = new System.Windows.Controls.TextBlock
+            {
+                Text = proc,
+                Foreground = (System.Windows.Media.Brush)FindResource("TextBrush"),
+                VerticalAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(4, 6, 4, 6)
+            };
+            System.Windows.Controls.Grid.SetColumn(label, 0);
+
+            var captured = proc; // capture for lambda
+            var btn = new System.Windows.Controls.Button
+            {
+                Content = "Add Rule →",
+                Style   = (Style)FindResource("SecondaryButton"),
+                Padding = new Thickness(8, 4, 8, 4),
+                Tag     = proc
+            };
+            btn.Click += (_, _) =>
+            {
+                if (captured.StartsWith("[test]")) return;
+                PromoteProcess(captured);
+            };
+            System.Windows.Controls.Grid.SetColumn(btn, 1);
+
+            row.Children.Add(label);
+            row.Children.Add(btn);
+            RecentPanel.Children.Add(row);
+        }
+
+        RecentPanel.Visibility = Visibility.Visible;
+    }
+
+    private void PromoteProcess(string processName)
+    {
+        var rule = new AppRule
+        {
+            ProcessName = processName,
+            DisplayName = processName,
+            Enabled     = true
+        };
+        var dialog = new RuleEditWindow(rule) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.Result is not null)
+        {
+            _db.SaveRule(dialog.Result);
+            LoadRules();
+        }
     }
 
     private void OnAddRule(object sender, RoutedEventArgs e)
@@ -68,25 +130,6 @@ public partial class SettingsWindow : Window
         {
             _db.DeleteRule(selected.Id);
             LoadRules();
-        }
-    }
-
-    private void OnPromoteRecentProcess(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string processName })
-        {
-            var rule = new AppRule
-            {
-                ProcessName = processName,
-                DisplayName = processName,
-                Enabled     = true
-            };
-            var dialog = new RuleEditWindow(rule);
-            if (dialog.ShowDialog() == true && dialog.Result is not null)
-            {
-                _db.SaveRule(dialog.Result);
-                LoadRules();
-            }
         }
     }
 

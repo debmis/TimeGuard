@@ -14,10 +14,18 @@ public partial class App : WpfApplication
     private MonitorService?  _monitor;
     private GlobalHotkeyHelper? _hotkey;
     private System.Windows.Window? _helperWindow;
+    private Mutex? _singleInstanceMutex;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _singleInstanceMutex = new Mutex(true, @"Global\TimeGuard-SingleInstance", out bool isNewInstance);
+        if (!isNewInstance)
+        {
+            Shutdown();
+            return;
+        }
 
         _db = new DatabaseService();
         var config = _db.LoadConfig();
@@ -110,6 +118,8 @@ public partial class App : WpfApplication
     {
         _hotkey?.Dispose();
         _monitor?.Dispose();
+        _singleInstanceMutex?.ReleaseMutex();
+        _singleInstanceMutex?.Dispose();
         base.OnExit(e);
     }
 }

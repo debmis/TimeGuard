@@ -29,44 +29,61 @@
             <TabItem Header="App Rules">
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="*" MinHeight="80"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="120"/>
+                        <RowDefinition Height="*" MinHeight="120"/>
+                        <RowDefinition Height="5"/>
+                        <RowDefinition Height="120" MinHeight="60"/>
                     </Grid.RowDefinitions>
 
-                    <DataGrid x:Name="RulesGrid"
-                              Grid.Row="0"
-                              AutoGenerateColumns="False"
-                              Background="{StaticResource DarkBrush}"
-                              Foreground="{StaticResource TextBrush}"
-                              RowBackground="{StaticResource DarkBrush}"
-                              AlternatingRowBackground="{StaticResource SurfaceBrush}"
-                              BorderThickness="0"
-                              GridLinesVisibility="None"
-                              CanUserAddRows="False"
-                              SelectionMode="Single"
-                              Margin="0,0,0,10">
-                        <DataGrid.Columns>
-                            <DataGridCheckBoxColumn  Header="On"          Binding="{Binding Enabled}"              Width="40"/>
-                            <DataGridTextColumn      Header="App Name"    Binding="{Binding DisplayName}"          Width="*"/>
-                            <DataGridTextColumn      Header="Process"     Binding="{Binding ProcessName}"          Width="110"/>
-                            <DataGridTextColumn      Header="Limit (min)" Binding="{Binding DailyLimitMinutes}"    Width="80"/>
-                            <DataGridTextColumn      Header="From"        Binding="{Binding AllowedWindowStart}"   Width="60"/>
-                            <DataGridTextColumn      Header="To"          Binding="{Binding AllowedWindowEnd}"     Width="60"/>
-                            <DataGridTextColumn      Header="Break every" Binding="{Binding BreakEveryMinutes}"    Width="80"/>
-                            <DataGridTextColumn      Header="Break dur."  Binding="{Binding BreakDurationMinutes}" Width="75"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <!-- Top half: rules grid + action buttons -->
+                    <Grid Grid.Row="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" MinHeight="80"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="🔍 Pick Process" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OnPickProcess"/>
-                        <Button Content="➕ Add Rule"     Style="{StaticResource PrimaryButton}"   Margin="0,0,8,0" Click="OnAddRule"/>
-                        <Button Content="✏️ Edit"         Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OnEditRule"/>
-                        <Button Content="🗑️ Delete"       Style="{StaticResource SecondaryButton}" Click="OnDeleteRule"/>
-                    </StackPanel>
+                        <DataGrid x:Name="RulesGrid"
+                                  Grid.Row="0"
+                                  AutoGenerateColumns="False"
+                                  Background="{StaticResource DarkBrush}"
+                                  Foreground="{StaticResource TextBrush}"
+                                  RowBackground="{StaticResource DarkBrush}"
+                                  AlternatingRowBackground="{StaticResource SurfaceBrush}"
+                                  BorderThickness="0"
+                                  GridLinesVisibility="None"
+                                  CanUserAddRows="False"
+                                  SelectionMode="Single"
+                                  Margin="0,0,0,10">
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn  Header="On"          Binding="{Binding Enabled}"              Width="40"/>
+                                <DataGridTextColumn      Header="App Name"    Binding="{Binding DisplayName}"          Width="*"/>
+                                <DataGridTextColumn      Header="Process"     Binding="{Binding ProcessName}"          Width="110"/>
+                                <DataGridTextColumn      Header="Limit (min)" Binding="{Binding DailyLimitMinutes}"    Width="80"/>
+                                <DataGridTextColumn      Header="From"        Binding="{Binding AllowedWindowStart}"   Width="60"/>
+                                <DataGridTextColumn      Header="To"          Binding="{Binding AllowedWindowEnd}"     Width="60"/>
+                                <DataGridTextColumn      Header="Break every" Binding="{Binding BreakEveryMinutes}"    Width="80"/>
+                                <DataGridTextColumn      Header="Break dur."  Binding="{Binding BreakDurationMinutes}" Width="75"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+                            <Button Content="🔍 Pick Process" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OnPickProcess"/>
+                            <Button Content="➕ Add Rule"     Style="{StaticResource PrimaryButton}"   Margin="0,0,8,0" Click="OnAddRule"/>
+                            <Button Content="✏️ Edit"         Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="OnEditRule"/>
+                            <Button Content="🗑️ Delete"       Style="{StaticResource SecondaryButton}" Click="OnDeleteRule"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Draggable splitter between rules and recently-seen -->
+                    <GridSplitter Grid.Row="1"
+                                  Height="5"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"
+                                  Background="#3A3A52"
+                                  ResizeDirection="Rows"
+                                  ShowsPreview="False"/>
 
                     <!-- Recently Seen (no rule) -->
-                    <Grid Grid.Row="2" Margin="0,12,0,0">
+                    <Grid Grid.Row="2" Margin="0,8,0,0">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
@@ -75,30 +92,8 @@
                                    Foreground="{StaticResource SubtextBrush}"
                                    FontSize="11" FontWeight="SemiBold"
                                    Margin="0,0,0,6"/>
-                        <DataGrid x:Name="RecentGrid" Grid.Row="1"
-                                  AutoGenerateColumns="False"
-                                  Background="{StaticResource DarkBrush}"
-                                  Foreground="{StaticResource TextBrush}"
-                                  RowBackground="{StaticResource DarkBrush}"
-                                  AlternatingRowBackground="{StaticResource SurfaceBrush}"
-                                  BorderThickness="0" GridLinesVisibility="None"
-                                  CanUserAddRows="False" IsReadOnly="True"
-                                  MinHeight="60">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Process" Binding="{Binding}" Width="*"/>
-                                <DataGridTemplateColumn Header="" Width="100">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="Add Rule →"
-                                                    Style="{StaticResource SecondaryButton}"
-                                                    Padding="8,4"
-                                                    Tag="{Binding}"
-                                                    Click="OnPromoteRecentProcess"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <!-- ButtonBase.Click attached event catches clicks from any Button inside -->
+                        <StackPanel x:Name="RecentPanel" Grid.Row="1"/>
                     </Grid>
                 </Grid>
             </TabItem>
