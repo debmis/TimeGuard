@@ -1,29 +1,59 @@
-# TimeGuard
+# 🛡️ TimeGuard
 
-A lightweight Windows parental screen-time manager that runs silently at startup, enforces per-app and overall daily usage limits, restricts apps to allowed time-of-day windows, warns the user 5 minutes before expiry, kills processes on limit expiry, and blocks relaunches for the rest of the day. Supports mandatory break schedules. Limits reset at midnight.
+> **Quietly protect your kids' screen time — without the arguments.**
 
-## Features
+A lightweight Windows parental screen-time manager that runs silently in the background, enforces per-app daily limits, restricts apps to allowed time-of-day windows, enforces mandatory break schedules, and blocks relaunches once limits are hit. Limits reset at midnight. 🌙
 
-- Invisible background service — no taskbar entry, no tray icon
-- Per-app daily time limits + overall daily cap
-- Time-of-day allowed windows per app
-- Mandatory break schedules per app (e.g. 5-min break every 30 min)
-- 5-minute warning popup before expiry
-- Fullscreen break overlay that counts down and blocks all input
-- Blocks and prevents relaunch once limit is hit (friendly "Time's up" message)
-- History dashboard with 7-day bar chart (OxyPlot) and per-day drilldown
-- Parent-only password-protected settings panel (opened via global hotkey)
-- Usage history stored in SQLite (`%AppData%\TimeGuard\timeguard.db`)
-- Launches automatically with Windows via registry (`HKCU\Run`)
+---
 
-## Tech Stack
+## ⬇️ Download & Install
+
+### [📦 Download TimeGuard-win-x64.zip](https://github.com/debmis/TimeGuard/raw/master/release/TimeGuard-win-x64.zip)
+
+**Requires:** [.NET 8 Desktop Runtime (Windows x64)](https://dotnet.microsoft.com/download/dotnet/8.0) — free, one-time install.
+
+### 🚀 Quick Start
+
+1. Install **.NET 8 Desktop Runtime** from the link above
+2. Download and extract **TimeGuard-win-x64.zip** to a permanent folder, e.g.:
+   ```
+   C:\Program Files\TimeGuard\
+   ```
+3. Run **TimeGuard.exe** — a setup wizard will appear to set your parent password 🔐
+4. That's it! TimeGuard registers itself to **start automatically with Windows** and runs silently in the background 🎉
+
+> ⚠️ Pick your permanent folder *before* first run. Moving the exe later breaks the auto-start entry (re-register via Settings → Security tab).
+
+### ⌨️ Opening Settings
+
+Press **Ctrl + Alt + Shift + G** at any time to open the parent settings panel (password required).
+
+---
+
+## ✨ Features
+
+- 👻 **Invisible** — no taskbar entry, no tray icon, totally silent
+- ⏱️ **Per-app daily time limits** + an overall daily cap across all apps
+- 🕐 **Time-of-day windows** — allow apps only between certain hours
+- ☕ **Mandatory break schedules** per app (e.g. 5-min break every 30 min)
+- ⚠️ **5-minute warning popup** before a limit expires
+- 🖥️ **Fullscreen break overlay** with countdown that covers all monitors and blocks all input
+- 🚫 **Blocks relaunches** once the limit is hit — with a friendly "Time's up" message
+- 📊 **History dashboard** with 7-day bar chart and per-day drilldown
+- 🔒 **Password-protected settings** panel opened via global hotkey
+- 💾 All usage history stored locally in SQLite (`%AppData%\TimeGuard\timeguard.db`)
+- 🪟 Auto-launches with Windows via registry (`HKCU\Run`)
+
+---
+
+## 🔧 Tech Stack
 
 - C# / .NET 8, WPF (Windows only)
 - SQLite via `Microsoft.Data.Sqlite` + `Dapper`
 - OxyPlot.Wpf for the history dashboard chart
 - xUnit for unit tests
 
-## Project Structure
+## 🗂️ Project Structure
 
 ```
 TimeGuard/
@@ -39,29 +69,9 @@ TimeGuard/
     └── TimeGuard.Tests/      # xUnit tests for RulesEngine + DatabaseService
 ```
 
-## Download & Install
+---
 
-### ⬇️ [Download TimeGuard-win-x64.zip](https://github.com/debmis/TimeGuard/raw/master/release/TimeGuard-win-x64.zip)
-
-**Requirements:** [.NET 8 Desktop Runtime (Windows x64)](https://dotnet.microsoft.com/download/dotnet/8.0) must be installed on the target machine.
-
-### Installation steps
-
-1. Install **.NET 8 Desktop Runtime** from the link above (one-time, free)
-2. Download **TimeGuard-win-x64.zip** and extract it to a permanent folder, e.g.:
-   ```
-   C:\Program Files\TimeGuard\
-   ```
-3. Run **TimeGuard.exe** — a setup wizard will appear to set your parent password
-4. Done — TimeGuard registers itself to **start automatically with Windows** and runs silently in the background
-
-> ⚠️ Choose your permanent folder *before* first run. Moving the exe later breaks the Windows auto-start entry (re-register via Settings → Security tab).
-
-### Opening Settings
-
-Press **Ctrl + Alt + Shift + G** at any time to open the parent settings panel (password required).
-
-## Build & Run
+## 🛠️ Build & Run
 
 ```bash
 # Build entire solution
@@ -79,15 +89,11 @@ dotnet test --filter "FullyQualifiedName~RulesEngineTests"
 # Run a single test method
 dotnet test --filter "FullyQualifiedName~RulesEngineTests.Block_WhenAtLimit"
 
-# Publish as single self-contained .exe
-dotnet publish src/TimeGuard.App -r win-x64 --self-contained -p:PublishSingleFile=true -o publish/
+# Publish as single-file framework-dependent .exe
+dotnet publish src/TimeGuard.App -r win-x64 --no-self-contained -p:PublishSingleFile=true -c Release -o publish/
 ```
 
-## First Run
-
-On first launch, a setup wizard prompts for a parent password. After setup, the app runs silently in the background. Open settings at any time with the default hotkey **Ctrl+Alt+Shift+G**.
-
-## Data Storage (SQLite)
+## 🗄️ Data Storage (SQLite)
 
 All data lives in `%AppData%\TimeGuard\timeguard.db`.
 
@@ -100,10 +106,10 @@ All data lives in `%AppData%\TimeGuard\timeguard.db`.
 
 Schema is created automatically by `DatabaseMigrator` on first run.
 
-## Break Schedule
+## ☕ Break Schedule
 
-Each app rule can optionally set:
+Each app rule can optionally configure:
 - **Break every N minutes** — how often a break is required
 - **Break duration M minutes** — how long the break must last
 
-When the break is due the app is not killed, but a fullscreen countdown overlay appears that covers all monitors and cannot be dismissed. The break timer resets automatically when the overlay closes.
+When a break is due, the app isn't killed — instead a fullscreen countdown overlay appears that covers all monitors and cannot be dismissed. The break timer resets automatically when the overlay closes.
