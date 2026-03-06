@@ -20,14 +20,29 @@ public partial class App : WpfApplication
     {
         base.OnStartup(e);
 
-        _singleInstanceMutex = new Mutex(true, @"Global\TimeGuard-SingleInstance", out bool isNewInstance);
+        bool isNewInstance;
+        try
+        {
+            _singleInstanceMutex = new Mutex(true, @"Global\TimeGuard-SingleInstance", out isNewInstance);
+        }
+        catch (AbandonedMutexException)
+        {
+            // Previous instance was killed; mutex is now ours
+            isNewInstance = true;
+        }
         if (!isNewInstance)
         {
             Shutdown();
             return;
         }
 
-        _db = new DatabaseService();
+        // --test-db <path> CLI arg takes priority (used by automated UI tests);
+        // fall back to env var, then the default production DB.
+        var testDb = GetArg(e.Args, "--test-db")
+                  ?? Environment.GetEnvironmentVariable("TIMEGUARD_TEST_DB");
+        _db = testDb is not null
+            ? new DatabaseService($"Data Source={testDb};")
+            : new DatabaseService();
         var config = _db.LoadConfig();
 
         if (config.IsFirstRun)
@@ -104,7 +119,7 @@ public partial class App : WpfApplication
 
     private void OpenSettings()
     {
-        var prompt = new UI.PasswordPromptWindow();
+        var prompt = new UI.PasswordPromptWindow(_db!);
         if (prompt.ShowDialog() != true) return;
 
         var settings = new UI.SettingsWindow(_db!);
@@ -118,8 +133,14 @@ public partial class App : WpfApplication
     {
         _hotkey?.Dispose();
         _monitor?.Dispose();
-        _singleInstanceMutex?.ReleaseMutex();
+        try { _singleInstanceMutex?.ReleaseMutex(); } catch { /* already released or abandoned */ }
         _singleInstanceMutex?.Dispose();
         base.OnExit(e);
+    }
+
+    private static string? GetArg(string[] args, string flag)
+    {
+        var idx = Array.IndexOf(args, flag);
+        return idx >= 0 && idx + 1 < args.Length ? args[idx + 1] : null;
     }
 }

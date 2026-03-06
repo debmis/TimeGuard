@@ -11,10 +11,10 @@ public partial class PasswordPromptWindow : Window
 {
     private readonly DatabaseService _db;
 
-    public PasswordPromptWindow()
+    public PasswordPromptWindow(DatabaseService db)
     {
         InitializeComponent();
-        _db = new DatabaseService();
+        _db = db;
         Loaded += (_, _) => PasswordBox.Focus();
     }
 
