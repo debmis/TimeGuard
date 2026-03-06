@@ -51,7 +51,7 @@ Press **Ctrl + Alt + Shift + G** at any time to open the parent settings panel (
 - C# / .NET 8, WPF (Windows only)
 - SQLite via `Microsoft.Data.Sqlite` + `Dapper`
 - OxyPlot.Wpf for the history dashboard chart
-- xUnit for unit tests
+- xUnit for unit tests + FlaUI (Windows UI Automation) for end-to-end UI tests
 
 ## 🗂️ Project Structure
 
@@ -66,7 +66,14 @@ TimeGuard/
 │       └── UI/               # App.xaml, SettingsWindow, RuleEditWindow, DashboardWindow,
 │                             #   BreakOverlay, ProcessPickerWindow, popups
 └── tests/
-    └── TimeGuard.Tests/      # xUnit tests for RulesEngine + DatabaseService
+    ├── TimeGuard.Tests/      # xUnit unit tests for RulesEngine + DatabaseService
+    └── TimeGuard.UITests/    # FlaUI end-to-end UI automation tests (launches real app)
+        ├── AppFixture.cs     # Launches TimeGuard.exe with a temp SQLite DB for isolation
+        ├── Helpers/          # WaitForWindow, FindButton, FindTextBox helpers
+        ├── FirstRunWindowTests.cs
+        ├── SettingsWindowTests.cs
+        ├── PopupTests.cs
+        └── DashboardWindowTests.cs
 ```
 
 ---
@@ -80,18 +87,36 @@ dotnet build
 # Run the app (debug)
 dotnet run --project src/TimeGuard.App
 
-# Run all tests
+# Run all tests (unit + UI automation)
 dotnet test
 
-# Run a single test class
-dotnet test --filter "FullyQualifiedName~RulesEngineTests"
+# Run only unit tests
+dotnet test tests/TimeGuard.Tests
 
-# Run a single test method
+# Run only UI automation tests (launches the real app)
+dotnet test tests/TimeGuard.UITests
+
+# Filter by test class or method
+dotnet test --filter "FullyQualifiedName~RulesEngineTests"
 dotnet test --filter "FullyQualifiedName~RulesEngineTests.Block_WhenAtLimit"
 
 # Publish as single-file framework-dependent .exe
 dotnet publish src/TimeGuard.App -r win-x64 --no-self-contained -p:PublishSingleFile=true -c Release -o publish/
 ```
+
+### 🔁 Auto-run UI tests on save
+
+`watch.ps1` at the repo root watches `*.cs` / `*.xaml` files and re-runs the UI test suite automatically on every save:
+
+```powershell
+# Default — uses "test123" as the parent password in tests
+.\watch.ps1
+
+# Use your own password (must match the password in your test DB)
+.\watch.ps1 -Password "mypassword"
+```
+
+> **Note:** UI automation tests launch a real `TimeGuard.exe` process against a throw-away temp SQLite database, so they never touch your real `%AppData%\TimeGuard\timeguard.db`. The app must be built (`dotnet build`) before running the tests — or just run `dotnet test` which builds automatically.
 
 ## 🗄️ Data Storage (SQLite)
 
