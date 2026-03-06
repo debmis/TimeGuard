@@ -271,7 +271,7 @@ Add a **"⭐ Bonus Tasks"** tab to the existing `SettingsWindow`:
 | Kid edits `BonusGrants` in SQLite directly | Parent password required to open `timeguard.db` folder (NTFS permissions set by installer) — this is a known limitation; full tamper-proofing requires a service process |
 | Kid fast-clicks through tasks | Tasks are fullscreen modal with a minimum engagement time (math: 2s per problem; writing: real-time word count; physical: webcam timer) |
 | Kid covers camera for physical tasks | Motion magnitude threshold must be met for ≥80% of the target duration; all-black or static frames restart the rep counter |
-| Writing tasks submitted with gibberish | Word count + optional keywords cover the basic case; V2 adds local LLM sentence coherence check via `Microsoft.Extensions.AI` |
+| Writing tasks submitted with gibberish | Three-layer local validation (no LLM): ① dictionary word-coverage ratio, ② Flesch-Kincaid readability score, ③ sentence count ≥ 1; Phase 4 adds `WeCantSpell.Hunspell` spell-check ratio for stronger detection |
 | Repeating yesterday's writing | SHA-256 hash of trimmed lowercase submission stored in `BonusGrants.SubmissionHash` |
 
 ---
@@ -299,7 +299,7 @@ Add a **"⭐ Bonus Tasks"** tab to the existing `SettingsWindow`:
 - Pose estimation (MoveNet ONNX) for accurate rep counting  
 - Multiple-choice quiz task type  
 - Daily summary in Dashboard: "earned X bonus minutes"  
-- Local LLM writing coherence check  
+- Enhanced writing validation: `WeCantSpell.Hunspell` spell-check ratio (replaces FK-only heuristics)  
 
 ---
 
@@ -310,12 +310,25 @@ Add a **"⭐ Bonus Tasks"** tab to the existing `SettingsWindow`:
 | `AForge.Video.DirectShow` | `TimeGuard.Bonus` | Webcam capture for physical tasks |
 | `AForge.Vision` | `TimeGuard.Bonus` | Motion detection / background subtraction |
 | `Microsoft.ML.OnnxRuntime` *(Phase 4)* | `TimeGuard.Bonus.Vision` | Pose estimation |
+| `WeCantSpell.Hunspell` *(Phase 4)* | `TimeGuard.Bonus` | Spell-check ratio for writing validation |
+
+### Writing validation detail (Phase 2 — no external dependencies)
+
+Three checks applied in order; all must pass to accept a submission:
+
+1. **Dictionary word-coverage** — bundle a 10k common English word list as an embedded resource (~50 KB). Score = `recognized / total`; threshold 65%. Rejects pure gibberish (`"asdfg asdfg"` scores 0%).
+2. **Flesch-Kincaid readability** — pure arithmetic on syllable/word/sentence counts. Requires score ≥ 30 (roughly 5th-grade level and above). Catches run-on walls of text with no punctuation and all-caps rants.
+3. **Sentence count** — at least 1 sentence-ending character (`.`, `?`, `!`) must be present. Prevents single-word spam that passes word count.
+
+Phase 4 adds `WeCantSpell.Hunspell` as a 4th check: if > 40% of words fail spell-check, reject. Catches random-word-sequence attacks that happen to use real dictionary words spaced apart.
 
 ---
 
-## 12. Open Questions
+## 12. Resolved Design Decisions
 
-1. **Offline AI writing validation** — is local LLM coherence checking in scope for Phase 2 or overkill?  
-2. **Cross-device parent approval** — should a future "Manual Approval" task type push a notification to a parent's phone (via a simple webhook/Pushover)?  
-3. **Bonus minutes cap** — should there be a hard daily ceiling (e.g. max 60 bonus min/day regardless of how many chains exist) configurable globally?  
-4. **Multimonitor physical tasks** — should the camera overlay span all monitors (like BreakOverlay) or a single window?  
+| # | Question | Decision |
+|---|---|---|
+| 1 | Offline writing validation without LLM? | ✅ Three-layer local heuristics: dictionary coverage + Flesch-Kincaid + sentence count. No model needed. Phase 4 adds Hunspell spell-check as 4th layer. |
+| 2 | Cross-device parent approval (Manual Approval task type)? | ✅ In scope. Phase 4 adds a "Manual Approval" task type that pushes a webhook/Pushover notification to parent's phone; parent approves or rejects from their device. |
+| 3 | Hard daily bonus minutes cap? | ✅ Yes — global `MaxBonusMinutesPerDay` setting (default 60 min). Configurable by parent in SettingsWindow. `BonusService.CanGrant()` checks remaining headroom before allowing a grant. |
+| 4 | Physical task camera overlay on multiple monitors? | ✅ Spans all monitors (fullscreen, like BreakOverlay). Uses `System.Windows.Forms.Screen.AllScreens` to compute combined bounds, same pattern as existing BreakOverlay. |
