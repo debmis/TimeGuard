@@ -83,7 +83,8 @@ CREATE TABLE BonusGrants (
     TaskId          INTEGER NOT NULL REFERENCES BonusTasks(Id),
     MinutesGranted  INTEGER NOT NULL,
     GrantedAt       TEXT    NOT NULL,  -- ISO-8601 UTC
-    Applied         INTEGER NOT NULL DEFAULT 0
+    Applied         INTEGER NOT NULL DEFAULT 0,
+    SubmissionHash  TEXT    NULL       -- SHA-256 of trimmed lowercase text; NULL for non-writing tasks
 );
 
 -- Per-chain progress today (resets at midnight like DailyUsage)
