@@ -8,17 +8,17 @@
         Background="{StaticResource DarkBrush}">
     <StackPanel Margin="24">
         <TextBlock Text="App Display Name:" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-        <TextBox x:Name="DisplayNameBox" Background="{StaticResource SurfaceBrush}"
+        <TextBox x:Name="DisplayNameBox" AutomationProperties.AutomationId="DisplayNameBox" Background="{StaticResource SurfaceBrush}"
                  Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
                  Padding="8,5" Margin="0,0,0,12"/>
 
         <TextBlock Text="Process Name (without .exe):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-        <TextBox x:Name="ProcessNameBox" Background="{StaticResource SurfaceBrush}"
+        <TextBox x:Name="ProcessNameBox" AutomationProperties.AutomationId="ProcessNameBox" Background="{StaticResource SurfaceBrush}"
                  Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
                  Padding="8,5" Margin="0,0,0,12"/>
 
         <TextBlock Text="Daily Limit (minutes, 0 = no limit):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-        <TextBox x:Name="LimitBox" Background="{StaticResource SurfaceBrush}"
+        <TextBox x:Name="LimitBox" AutomationProperties.AutomationId="LimitBox" Background="{StaticResource SurfaceBrush}"
                  Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
                  Padding="8,5" Margin="0,0,0,12"/>
 
@@ -51,13 +51,13 @@
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0">
                 <TextBlock Text="Break every N min (0=off):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="BreakEveryBox" Background="{StaticResource SurfaceBrush}"
+                <TextBox x:Name="BreakEveryBox" AutomationProperties.AutomationId="BreakEveryBox" Background="{StaticResource SurfaceBrush}"
                          Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
                          Padding="8,5"/>
             </StackPanel>
             <StackPanel Grid.Column="2">
                 <TextBlock Text="Break duration (min):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="BreakDurationBox" Background="{StaticResource SurfaceBrush}"
+                <TextBox x:Name="BreakDurationBox" AutomationProperties.AutomationId="BreakDurationBox" Background="{StaticResource SurfaceBrush}"
                          Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
                          Padding="8,5"/>
             </StackPanel>
