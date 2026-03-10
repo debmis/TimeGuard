@@ -3,6 +3,7 @@ name: Build & Package
 on:
   push:
     branches: [ master ]
+    tags:     [ 'v*' ]
   pull_request:
     branches: [ master ]
 
@@ -50,3 +51,21 @@ jobs:
           name: TimeGuard-win-x64
           path: release/TimeGuard-win-x64.zip
           retention-days: 30
+
+      # ── GitHub Release (only on version tags, e.g. v1.0.0) ──────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "TimeGuard ${{ github.ref_name }}"
+          body: |
+            ## TimeGuard ${{ github.ref_name }}
+
+            Self-contained Windows x64 build — no .NET runtime required.
+
+            **Install:**
+            1. Download and extract `TimeGuard-win-x64.zip` to a permanent folder (e.g. `C:\Program Files\TimeGuard\`)
+            2. Run `TimeGuard.exe`
+          files: release/TimeGuard-win-x64.zip
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

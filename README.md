@@ -9,10 +9,12 @@ A lightweight Windows parental screen-time manager that runs silently in the bac
 ## ⬇️ Download & Install
 
 [![Build & Package](https://github.com/debmis/TimeGuard/actions/workflows/build.yml/badge.svg)](https://github.com/debmis/TimeGuard/actions/workflows/build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/debmis/TimeGuard?label=latest%20release)](https://github.com/debmis/TimeGuard/releases/latest)
 
-**[📦 Download TimeGuard-win-x64.zip](https://github.com/debmis/TimeGuard/actions/workflows/build.yml)** — click the latest successful run, then scroll to **Artifacts → TimeGuard-win-x64** to download.
+**[📦 Download latest TimeGuard-win-x64.zip](https://github.com/debmis/TimeGuard/releases/latest/download/TimeGuard-win-x64.zip)**
 
-> The zip is a **self-contained** single-file executable — no .NET runtime installation required.
+> Self-contained single-file executable — no .NET runtime required.
+> Can't find the link above? Browse [all releases](https://github.com/debmis/TimeGuard/releases) or grab a short-lived build artifact from the [Actions tab](https://github.com/debmis/TimeGuard/actions/workflows/build.yml).
 
 ### 🚀 Quick Start
 
