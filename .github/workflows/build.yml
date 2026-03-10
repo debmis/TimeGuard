@@ -1,0 +1,52 @@
+name: Build & Package
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Unit Tests
+        run: dotnet test tests/TimeGuard.Tests --no-build -c Release --logger "console;verbosity=normal"
+
+      - name: Publish (single-file win-x64)
+        run: >
+          dotnet publish src/TimeGuard.App
+          -c Release
+          -r win-x64
+          --self-contained
+          -p:PublishSingleFile=true
+          -o publish/
+
+      - name: Package release zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Compress-Archive -Path publish/TimeGuard.exe -DestinationPath release/TimeGuard-win-x64.zip -Force
+          Write-Host "Created release/TimeGuard-win-x64.zip ($((Get-Item release/TimeGuard-win-x64.zip).Length / 1MB -as [int]) MB)"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TimeGuard-win-x64
+          path: release/TimeGuard-win-x64.zip
+          retention-days: 30
