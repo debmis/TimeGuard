@@ -135,4 +135,68 @@ public class RulesEngineTests
         var relaunched = _engine.GetRelaunched([], MakeLog(60, blocked: true), MakeConfig());
         Assert.Empty(relaunched);
     }
+
+    // ── Already-blocked entry skipped ─────────────────────────────────────────
+
+    [Fact]
+    public void NoBlock_WhenEntryAlreadyBlocked()
+    {
+        // If the entry is already blocked, Evaluate should not emit a second Block action
+        var actions = _engine.Evaluate(_running, MakeLog(60, blocked: true), MakeConfig(60), new TimeOnly(16, 0));
+        Assert.Empty(actions);
+    }
+
+    // ── Break schedule ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BreakDue_WhenTimeSinceBreakExceedsInterval()
+    {
+        var config = new AppConfig
+        {
+            PasswordHash = "x", PasswordSalt = "x",
+            Rules =
+            [
+                new AppRule
+                {
+                    ProcessName          = "roblox",
+                    DisplayName          = "Roblox",
+                    DailyLimitMinutes    = 120,
+                    BreakEveryMinutes    = 30,
+                    BreakDurationMinutes = 5,
+                    Enabled              = true
+                }
+            ]
+        };
+
+        var breakTimers = new Dictionary<string, double> { ["roblox"] = 30 };
+        var actions = _engine.Evaluate(_running, MakeLog(30), config, new TimeOnly(16, 0), breakTimers);
+
+        Assert.Single(actions);
+        Assert.Equal(RulesEngine.ActionKind.BreakDue, actions[0].Kind);
+    }
+
+    [Fact]
+    public void NoBreakDue_WhenTimeSinceBreakBelowInterval()
+    {
+        var config = new AppConfig
+        {
+            PasswordHash = "x", PasswordSalt = "x",
+            Rules =
+            [
+                new AppRule
+                {
+                    ProcessName          = "roblox",
+                    DisplayName          = "Roblox",
+                    DailyLimitMinutes    = 120,
+                    BreakEveryMinutes    = 30,
+                    BreakDurationMinutes = 5,
+                    Enabled              = true
+                }
+            ]
+        };
+
+        var breakTimers = new Dictionary<string, double> { ["roblox"] = 20 };
+        var actions = _engine.Evaluate(_running, MakeLog(20), config, new TimeOnly(16, 0), breakTimers);
+        Assert.Empty(actions);
+    }
 }

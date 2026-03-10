@@ -50,6 +50,22 @@ public partial class RuleEditWindow : Window
             return;
         }
 
+        // Break every N minutes must be less than the daily limit (when both are set)
+        if (breakEvery > 0 && limit > 0 && breakEvery >= limit)
+        {
+            ErrorText.Text = "Break interval must be less than the daily limit.";
+            ErrorText.Visibility = Visibility.Visible;
+            return;
+        }
+
+        // Break duration must not exceed the break interval
+        if (breakEvery > 0 && breakDur > breakEvery)
+        {
+            ErrorText.Text = "Break duration must be less than or equal to the break interval.";
+            ErrorText.Visibility = Visibility.Visible;
+            return;
+        }
+
         var start = WindowStartBox.Text.Trim();
         var end   = WindowEndBox.Text.Trim();
 

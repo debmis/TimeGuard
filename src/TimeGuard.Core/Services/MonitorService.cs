@@ -41,7 +41,39 @@ public sealed class MonitorService : IDisposable
 
     public void Start() => Task.Run(() => RunLoop(_cts.Token));
 
-    public void ReloadConfig(AppConfig config) => _config = config;
+    public void ReloadConfig(AppConfig config)
+    {
+        _config = config;
+
+        // Re-evaluate blocked entries against the new limits; unblock if the limit was raised.
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        foreach (var entry in _log.Entries.Where(e => e.Blocked))
+        {
+            var rule = config.Rules.FirstOrDefault(r =>
+                r.ProcessName.Equals(entry.ProcessName, StringComparison.OrdinalIgnoreCase));
+            if (rule is null) continue;
+
+            if (!rule.HasDailyLimit || entry.UsageMinutes < rule.DailyLimitMinutes)
+            {
+                entry.Blocked = false;
+                // Reset warning so it can fire again as usage approaches the new limit
+                if (rule.HasDailyLimit && entry.UsageMinutes < rule.DailyLimitMinutes - 5)
+                    entry.WarningSent = false;
+                _db.UpsertUsageEntry(today, entry);
+            }
+        }
+
+        // Unset the overall cap flag if the new cap is higher than current total usage.
+        if (_log.OverallCapHit &&
+            (config.OverallDailyLimitMinutes == 0 ||
+             _log.TotalUsageMinutes < config.OverallDailyLimitMinutes))
+        {
+            _log.OverallCapHit = false;
+        }
+    }
+
+    /// <summary>Exposes whether the overall daily cap has been hit (used in tests).</summary>
+    public bool IsOverallCapHit => _log.OverallCapHit;
 
     /// <summary>Called by App.xaml.cs after the break overlay is dismissed.</summary>
     public void OnBreakCompleted(string processName)
