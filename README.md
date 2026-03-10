@@ -8,19 +8,20 @@ A lightweight Windows parental screen-time manager that runs silently in the bac
 
 ## ⬇️ Download & Install
 
-### [📦 Download TimeGuard-win-x64.zip](https://github.com/debmis/TimeGuard/raw/master/release/TimeGuard-win-x64.zip)
+[![Build & Package](https://github.com/debmis/TimeGuard/actions/workflows/build.yml/badge.svg)](https://github.com/debmis/TimeGuard/actions/workflows/build.yml)
 
-**Requires:** [.NET 8 Desktop Runtime (Windows x64)](https://dotnet.microsoft.com/download/dotnet/8.0) — free, one-time install.
+**[📦 Download TimeGuard-win-x64.zip](https://github.com/debmis/TimeGuard/actions/workflows/build.yml)** — click the latest successful run, then scroll to **Artifacts → TimeGuard-win-x64** to download.
+
+> The zip is a **self-contained** single-file executable — no .NET runtime installation required.
 
 ### 🚀 Quick Start
 
-1. Install **.NET 8 Desktop Runtime** from the link above
-2. Download and extract **TimeGuard-win-x64.zip** to a permanent folder, e.g.:
+1. Download and extract **TimeGuard-win-x64.zip** to a permanent folder, e.g.:
    ```
    C:\Program Files\TimeGuard\
    ```
-3. Run **TimeGuard.exe** — a setup wizard will appear to set your parent password 🔐
-4. That's it! TimeGuard registers itself to **start automatically with Windows** and runs silently in the background 🎉
+2. Run **TimeGuard.exe** — a setup wizard will appear to set your parent password 🔐
+3. That's it! TimeGuard registers itself to **start automatically with Windows** and runs silently in the background 🎉
 
 > ⚠️ Pick your permanent folder *before* first run. Moving the exe later breaks the auto-start entry (re-register via Settings → Security tab).
 
