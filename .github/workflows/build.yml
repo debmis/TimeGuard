@@ -44,8 +44,10 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          Compress-Archive -Path publish/TimeGuard.exe -DestinationPath release/TimeGuard-win-x64.zip -Force
-          Write-Host "Created release/TimeGuard-win-x64.zip ($((Get-Item release/TimeGuard-win-x64.zip).Length / 1MB -as [int]) MB)"
+          # Zip the entire publish folder — WPF single-file publish still requires
+          # several native DLLs (wpfgfx, D3DCompiler, e_sqlite3, etc.) alongside the exe.
+          Compress-Archive -Path publish/* -DestinationPath release/TimeGuard-win-x64.zip -Force
+          Write-Host "Created release/TimeGuard-win-x64.zip ($([math]::Round((Get-Item release/TimeGuard-win-x64.zip).Length / 1MB, 1)) MB)"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
