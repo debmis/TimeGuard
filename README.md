@@ -13,7 +13,7 @@ A lightweight Windows parental screen-time manager that runs silently in the bac
 
 **[📦 Download latest TimeGuard-win-x64.zip](https://github.com/debmis/TimeGuard/releases/latest/download/TimeGuard-win-x64.zip)**
 
-> The zip contains `TimeGuard.exe` plus required native Windows DLLs — **extract all files** to the same folder before running.
+> Single-file self-contained executable — no .NET runtime required. Extract and run `TimeGuard.exe`.
 > Can't find the link above? Browse [all releases](https://github.com/debmis/TimeGuard/releases) or grab a short-lived build artifact from the [Actions tab](https://github.com/debmis/TimeGuard/actions/workflows/build.yml).
 
 ### 🚀 Quick Start
