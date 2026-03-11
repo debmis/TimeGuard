@@ -38,6 +38,8 @@ jobs:
           -r win-x64
           --self-contained
           -p:PublishSingleFile=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
           -o publish/
 
       - name: Package release zip
@@ -46,7 +48,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path release | Out-Null
           # Zip the entire publish folder — WPF single-file publish still requires
           # several native DLLs (wpfgfx, D3DCompiler, e_sqlite3, etc.) alongside the exe.
-          Compress-Archive -Path publish/* -DestinationPath release/TimeGuard-win-x64.zip -Force
+          # Exclude PDB files which should not ship to end users.
+          $files = Get-ChildItem publish/* | Where-Object { $_.Extension -ne '.pdb' }
+          Compress-Archive -Path $files.FullName -DestinationPath release/TimeGuard-win-x64.zip -Force
+          Write-Host "Contents:"
+          $files | Select-Object Name, @{N='KB';E={[math]::Round($_.Length/1KB)}} | Format-Table
           Write-Host "Created release/TimeGuard-win-x64.zip ($([math]::Round((Get-Item release/TimeGuard-win-x64.zip).Length / 1MB, 1)) MB)"
 
       - name: Upload artifact

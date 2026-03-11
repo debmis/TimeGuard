@@ -34,6 +34,8 @@ dotnet publish "$root\src\TimeGuard.App" `
     -r win-x64 `
     --self-contained `
     -p:PublishSingleFile=true `
+    -p:DebugType=None `
+    -p:DebugSymbols=false `
     -o "$publishDir" `
     -v q
 if ($LASTEXITCODE -ne 0) { Write-Host "Publish failed." -ForegroundColor Red; exit 1 }
@@ -42,9 +44,12 @@ Write-Host "[4/4] Packaging release/TimeGuard-win-x64.zip..." -ForegroundColor C
 $releaseDir = Join-Path $root "release"
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 $zipPath = Join-Path $releaseDir "TimeGuard-win-x64.zip"
-# Zip the entire publish folder — WPF single-file publish still requires
-# native DLLs (wpfgfx, D3DCompiler, e_sqlite3, etc.) alongside the exe.
-Compress-Archive -Path "$publishDir\*" -DestinationPath $zipPath -Force
+# Zip all publish files except PDB debug symbols.
+$files = Get-ChildItem "$publishDir\*" | Where-Object { $_.Extension -ne '.pdb' }
+Compress-Archive -Path $files.FullName -DestinationPath $zipPath -Force
+
+Write-Host "`nZip contents:" -ForegroundColor DarkGray
+$files | Select-Object Name, @{N='KB';E={[math]::Round($_.Length/1KB)}} | Format-Table
 
 $sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
 Write-Host "`n✅ Done!  release\TimeGuard-win-x64.zip  ($sizeMB MB)" -ForegroundColor Green
