@@ -73,7 +73,7 @@ public class RuleEditWindowTests : IClassFixture<SeededAppFixture>
 
         FillField(ruleWindow, "DisplayNameBox",   "TestApp");
         FillField(ruleWindow, "ProcessNameBox",   "testapp");
-        FillField(ruleWindow, "LimitBox",         "60");
+        FillField(ruleWindow, "MondayLimitBox",   "60");
         FillField(ruleWindow, "BreakEveryBox",    "60");   // equals limit — invalid
         FillField(ruleWindow, "BreakDurationBox", "5");
 
@@ -104,7 +104,7 @@ public class RuleEditWindowTests : IClassFixture<SeededAppFixture>
 
         FillField(ruleWindow, "DisplayNameBox",   "TestApp");
         FillField(ruleWindow, "ProcessNameBox",   "testapp");
-        FillField(ruleWindow, "LimitBox",         "60");
+        FillField(ruleWindow, "MondayLimitBox",   "60");
         FillField(ruleWindow, "BreakEveryBox",    "90");   // exceeds limit — invalid
         FillField(ruleWindow, "BreakDurationBox", "5");
 
@@ -129,7 +129,7 @@ public class RuleEditWindowTests : IClassFixture<SeededAppFixture>
 
         FillField(ruleWindow, "DisplayNameBox",   "TestApp");
         FillField(ruleWindow, "ProcessNameBox",   "testapp");
-        FillField(ruleWindow, "LimitBox",         "0");    // no limit
+        FillField(ruleWindow, "MondayLimitBox",   "0");    // no limit
         FillField(ruleWindow, "BreakEveryBox",    "60");
         FillField(ruleWindow, "BreakDurationBox", "10");
 
@@ -155,7 +155,7 @@ public class RuleEditWindowTests : IClassFixture<SeededAppFixture>
 
         FillField(ruleWindow, "DisplayNameBox",   "TestApp");
         FillField(ruleWindow, "ProcessNameBox",   "testapp");
-        FillField(ruleWindow, "LimitBox",         "120");
+        FillField(ruleWindow, "MondayLimitBox",   "120");
         FillField(ruleWindow, "BreakEveryBox",    "30");
         FillField(ruleWindow, "BreakDurationBox", "45");  // > breakEvery — invalid
 
@@ -184,7 +184,7 @@ public class RuleEditWindowTests : IClassFixture<SeededAppFixture>
 
         FillField(ruleWindow, "DisplayNameBox",   "TestApp");
         FillField(ruleWindow, "ProcessNameBox",   "testapp");
-        FillField(ruleWindow, "LimitBox",         "120");
+        FillField(ruleWindow, "MondayLimitBox",   "120");
         FillField(ruleWindow, "BreakEveryBox",    "30");
         FillField(ruleWindow, "BreakDurationBox", "30");  // equals breakEvery — valid
 
@@ -194,6 +194,39 @@ public class RuleEditWindowTests : IClassFixture<SeededAppFixture>
         var windows = _fx.App.GetAllTopLevelWindows(_fx.Automation);
         Assert.False(windows.Any(w => w.Title?.Contains("Edit App Rule") == true),
             "RuleEditWindow should close when break duration equals break interval.");
+
+        settings.Close();
+    }
+
+    [Fact]
+    public void Save_PersistsWeekdaySpecificLimitAndWindow()
+    {
+        const string processName = "weekdayscheduleapp";
+
+        var settings   = OpenSettingsWindow();
+        var ruleWindow = OpenRuleEditWindow(settings);
+
+        FillField(ruleWindow, "DisplayNameBox",          "Weekday Schedule App");
+        FillField(ruleWindow, "ProcessNameBox",          processName);
+        FillField(ruleWindow, "MondayLimitBox",          "60");
+        FillField(ruleWindow, "WednesdayLimitBox",       "30");
+        FillField(ruleWindow, "WednesdayWindowStartBox", "12:00");
+        FillField(ruleWindow, "WednesdayWindowEndBox",   "14:00");
+
+        ruleWindow.FindButton("Save").Click();
+        Thread.Sleep(500);
+
+        var windows = _fx.App.GetAllTopLevelWindows(_fx.Automation);
+        Assert.False(windows.Any(w => w.Title?.Contains("Edit App Rule") == true),
+            "RuleEditWindow should close when a weekday-specific rule is valid.");
+
+        var db = _fx.OpenDatabase();
+        var saved = db.GetRules().Single(r => r.ProcessName == processName);
+
+        Assert.Equal(60, saved.GetScheduleForDay(DayOfWeek.Monday).DailyLimitMinutes);
+        Assert.Equal(30, saved.GetScheduleForDay(DayOfWeek.Wednesday).DailyLimitMinutes);
+        Assert.Equal("12:00", saved.GetScheduleForDay(DayOfWeek.Wednesday).AllowedWindowStart);
+        Assert.Equal("14:00", saved.GetScheduleForDay(DayOfWeek.Wednesday).AllowedWindowEnd);
 
         settings.Close();
     }

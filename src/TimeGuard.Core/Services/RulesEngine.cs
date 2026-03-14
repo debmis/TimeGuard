@@ -63,6 +63,7 @@ public class RulesEngine
         }
 
         // ── Per-app rules ─────────────────────────────────────────────────────
+        var currentDay = log.Date.DayOfWeek;
         foreach (var rule in config.Rules.Where(r => r.Enabled))
         {
             var key = rule.ProcessName.ToLowerInvariant();
@@ -70,27 +71,28 @@ public class RulesEngine
 
             var entry = log.GetOrCreate(rule.ProcessName);
             if (entry.Blocked) continue; // already handled
+            var daySchedule = rule.GetScheduleForDay(currentDay);
 
             // Time-of-day window violation → immediate block
-            if (rule.HasTimeWindow && !rule.IsWithinAllowedWindow(now))
+            if (daySchedule.HasTimeWindow && !daySchedule.IsWithinAllowedWindow(now))
             {
                 actions.Add(new RuleAction(ActionKind.Block, rule.ProcessName, rule.DisplayName,
-                    $"{rule.DisplayName} is not allowed at this time (allowed: {rule.AllowedWindowStart}–{rule.AllowedWindowEnd})."));
+                    $"{rule.DisplayName} is not allowed at this time on {currentDay} (allowed: {daySchedule.AllowedWindowStart}-{daySchedule.AllowedWindowEnd})."));
                 continue;
             }
 
-            if (rule.HasDailyLimit)
+            if (daySchedule.HasDailyLimit)
             {
                 var used = entry.UsageMinutes;
 
-                if (used >= rule.DailyLimitMinutes)
+                if (used >= daySchedule.DailyLimitMinutes)
                 {
                     actions.Add(new RuleAction(ActionKind.Block, rule.ProcessName, rule.DisplayName,
-                        $"Daily limit of {rule.DailyLimitMinutes} min reached for {rule.DisplayName}."));
+                        $"Daily limit of {daySchedule.DailyLimitMinutes} min reached for {rule.DisplayName} on {currentDay}."));
                 }
                 else
                 {
-                    var remaining = rule.DailyLimitMinutes - used;
+                    var remaining = daySchedule.DailyLimitMinutes - used;
                     if (remaining <= WarningThresholdMinutes && !entry.WarningSent)
                         actions.Add(new RuleAction(ActionKind.WarnFiveMinutes, rule.ProcessName,
                             rule.DisplayName, $"{rule.DisplayName} has ~{remaining:F0} minutes left today."));

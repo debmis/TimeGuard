@@ -6,6 +6,17 @@ namespace TimeGuard.Tests;
 
 public class DatabaseServiceTests : IDisposable
 {
+    private static readonly DayOfWeek[] OrderedDays =
+    [
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday,
+        DayOfWeek.Sunday
+    ];
+
     private readonly string _dbPath;
     private readonly string _connString;
 
@@ -16,6 +27,20 @@ public class DatabaseServiceTests : IDisposable
     }
 
     private DatabaseService CreateSvc() => new(_connString);
+
+    private static List<AppRuleDaySchedule> MakeWeekSchedule(int defaultLimit = 0,
+        string? defaultStart = null, string? defaultEnd = null)
+    {
+        return OrderedDays
+            .Select(day => new AppRuleDaySchedule
+            {
+                DayOfWeek          = day,
+                DailyLimitMinutes  = defaultLimit,
+                AllowedWindowStart = defaultStart,
+                AllowedWindowEnd   = defaultEnd
+            })
+            .ToList();
+    }
 
     // ── Settings ──────────────────────────────────────────────────────────────
 
@@ -61,6 +86,13 @@ public class DatabaseServiceTests : IDisposable
         Assert.Equal("15:00",       rules[0].AllowedWindowStart);
         Assert.Equal(30,            rules[0].BreakEveryMinutes);
         Assert.Equal(5,             rules[0].BreakDurationMinutes);
+        Assert.Equal(7,             rules[0].DaySchedules.Count);
+        Assert.All(rules[0].DaySchedules, schedule =>
+        {
+            Assert.Equal(60, schedule.DailyLimitMinutes);
+            Assert.Equal("15:00", schedule.AllowedWindowStart);
+            Assert.Equal("20:00", schedule.AllowedWindowEnd);
+        });
     }
 
     [Fact]
@@ -87,6 +119,91 @@ public class DatabaseServiceTests : IDisposable
 
         svc.DeleteRule(id);
         Assert.Empty(svc.GetRules());
+    }
+
+    [Fact]
+    public void AppRules_DaySchedules_RoundTrip()
+    {
+        var svc      = CreateSvc();
+        var schedule = MakeWeekSchedule();
+        schedule.First(s => s.DayOfWeek == DayOfWeek.Monday).DailyLimitMinutes = 60;
+        schedule.First(s => s.DayOfWeek == DayOfWeek.Wednesday).DailyLimitMinutes = 30;
+        schedule.First(s => s.DayOfWeek == DayOfWeek.Wednesday).AllowedWindowStart = "12:00";
+        schedule.First(s => s.DayOfWeek == DayOfWeek.Wednesday).AllowedWindowEnd   = "14:00";
+
+        var rule = new AppRule
+        {
+            ProcessName          = "roblox",
+            DisplayName          = "Roblox",
+            BreakEveryMinutes    = 20,
+            BreakDurationMinutes = 5,
+            Enabled              = true
+        };
+        rule.SetWeekSchedule(schedule);
+
+        svc.SaveRule(rule);
+        var saved = svc.GetRules().Single();
+
+        Assert.Equal(7, saved.DaySchedules.Count);
+        Assert.Equal(60, saved.GetScheduleForDay(DayOfWeek.Monday).DailyLimitMinutes);
+        Assert.Equal(30, saved.GetScheduleForDay(DayOfWeek.Wednesday).DailyLimitMinutes);
+        Assert.Equal("12:00", saved.GetScheduleForDay(DayOfWeek.Wednesday).AllowedWindowStart);
+        Assert.Equal("14:00", saved.GetScheduleForDay(DayOfWeek.Wednesday).AllowedWindowEnd);
+        Assert.Equal(0, saved.DailyLimitMinutes);
+        Assert.Null(saved.AllowedWindowStart);
+    }
+
+    [Fact]
+    public void AppRules_MigrationBackfillsWeekdaySchedules_ForLegacyRules()
+    {
+        using (var conn = new Microsoft.Data.Sqlite.SqliteConnection(_connString))
+        {
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                CREATE TABLE AppRules (
+                    Id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ProcessName       TEXT    NOT NULL,
+                    DisplayName       TEXT    NOT NULL,
+                    DailyLimitMins    INTEGER NOT NULL DEFAULT 0,
+                    WindowStart       TEXT,
+                    WindowEnd         TEXT,
+                    BreakEveryMins    INTEGER NOT NULL DEFAULT 0,
+                    BreakDurationMins INTEGER NOT NULL DEFAULT 0,
+                    Enabled           INTEGER NOT NULL DEFAULT 1
+                );
+
+                CREATE TABLE Settings (
+                    Key   TEXT PRIMARY KEY,
+                    Value TEXT NOT NULL DEFAULT ''
+                );
+
+                CREATE TABLE DailyUsage (
+                    Id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Date        TEXT    NOT NULL,
+                    ProcessName TEXT    NOT NULL,
+                    UsageMins   REAL    NOT NULL DEFAULT 0,
+                    Blocked     INTEGER NOT NULL DEFAULT 0,
+                    WarningSent INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(Date, ProcessName)
+                );
+
+                INSERT INTO AppRules(ProcessName, DisplayName, DailyLimitMins, WindowStart, WindowEnd, Enabled)
+                VALUES('roblox', 'Roblox', 45, '12:00', '14:00', 1);
+                """;
+            cmd.ExecuteNonQuery();
+        }
+
+        var svc  = CreateSvc();
+        var rule = svc.GetRules().Single();
+
+        Assert.Equal(7, rule.DaySchedules.Count);
+        Assert.All(rule.DaySchedules, schedule =>
+        {
+            Assert.Equal(45, schedule.DailyLimitMinutes);
+            Assert.Equal("12:00", schedule.AllowedWindowStart);
+            Assert.Equal("14:00", schedule.AllowedWindowEnd);
+        });
     }
 
     // ── Daily Usage ───────────────────────────────────────────────────────────

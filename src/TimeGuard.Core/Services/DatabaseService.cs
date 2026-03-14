@@ -78,21 +78,50 @@ public class DatabaseService
     public List<AppRule> GetRules()
     {
         using var conn = Open();
-        return conn.Query<AppRule>("""
+        var rules = conn.Query<AppRule>("""
             SELECT Id, ProcessName, DisplayName,
                    DailyLimitMins  AS DailyLimitMinutes,
                    WindowStart     AS AllowedWindowStart,
                    WindowEnd       AS AllowedWindowEnd,
                    BreakEveryMins  AS BreakEveryMinutes,
-                   BreakDurationMins AS BreakDurationMinutes,
+                    BreakDurationMins AS BreakDurationMinutes,
                    Enabled
             FROM AppRules ORDER BY DisplayName
             """).ToList();
+
+        var scheduleLookup = conn.Query<AppRuleDayScheduleRow>("""
+            SELECT RuleId,
+                   DayOfWeek,
+                   DailyLimitMins AS DailyLimitMinutes,
+                   WindowStart    AS AllowedWindowStart,
+                   WindowEnd      AS AllowedWindowEnd
+            FROM AppRuleDaySchedules
+            ORDER BY RuleId, DayOfWeek
+            """)
+            .GroupBy(row => row.RuleId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(row => row.ToSchedule()).ToList());
+
+        foreach (var rule in rules)
+        {
+            if (scheduleLookup.TryGetValue(rule.Id, out var schedules))
+                rule.SetWeekSchedule(schedules);
+            else
+                rule.SetWeekSchedule(rule.GetWeekSchedule());
+        }
+
+        return rules;
     }
 
     public void SaveRule(AppRule rule)
     {
         using var conn = Open();
+        using var tx   = conn.BeginTransaction();
+
+        var schedules      = GetSchedulesForPersistence(rule);
+        var legacySchedule = GetLegacyScheduleForPersistence(schedules);
+
         if (rule.Id == 0)
         {
             rule.Id = conn.QuerySingle<int>("""
@@ -101,7 +130,17 @@ public class DatabaseService
                 VALUES(@ProcessName, @DisplayName, @DailyLimitMinutes,
                     @AllowedWindowStart, @AllowedWindowEnd, @BreakEveryMinutes, @BreakDurationMinutes, @Enabled);
                 SELECT last_insert_rowid();
-                """, rule);
+                """, new
+            {
+                rule.ProcessName,
+                rule.DisplayName,
+                DailyLimitMinutes  = legacySchedule.DailyLimitMinutes,
+                AllowedWindowStart = legacySchedule.AllowedWindowStart,
+                AllowedWindowEnd   = legacySchedule.AllowedWindowEnd,
+                rule.BreakEveryMinutes,
+                rule.BreakDurationMinutes,
+                rule.Enabled
+            }, tx);
         }
         else
         {
@@ -116,14 +155,47 @@ public class DatabaseService
                     BreakDurationMins = @BreakDurationMinutes,
                     Enabled           = @Enabled
                 WHERE Id = @Id
-                """, rule);
+                """, new
+            {
+                rule.Id,
+                rule.ProcessName,
+                rule.DisplayName,
+                DailyLimitMinutes  = legacySchedule.DailyLimitMinutes,
+                AllowedWindowStart = legacySchedule.AllowedWindowStart,
+                AllowedWindowEnd   = legacySchedule.AllowedWindowEnd,
+                rule.BreakEveryMinutes,
+                rule.BreakDurationMinutes,
+                rule.Enabled
+            }, tx);
         }
+
+        conn.Execute("DELETE FROM AppRuleDaySchedules WHERE RuleId = @ruleId",
+            new { ruleId = rule.Id }, tx);
+
+        conn.Execute("""
+            INSERT INTO AppRuleDaySchedules(RuleId, DayOfWeek, DailyLimitMins, WindowStart, WindowEnd)
+            VALUES(@RuleId, @DayOfWeek, @DailyLimitMinutes, @AllowedWindowStart, @AllowedWindowEnd)
+            """,
+            schedules.Select(schedule => new
+            {
+                RuleId             = rule.Id,
+                DayOfWeek          = (int)schedule.DayOfWeek,
+                schedule.DailyLimitMinutes,
+                schedule.AllowedWindowStart,
+                schedule.AllowedWindowEnd
+            }),
+            tx);
+
+        tx.Commit();
     }
 
     public void DeleteRule(int id)
     {
         using var conn = Open();
-        conn.Execute("DELETE FROM AppRules WHERE Id = @id", new { id });
+        using var tx   = conn.BeginTransaction();
+        conn.Execute("DELETE FROM AppRuleDaySchedules WHERE RuleId = @id", new { id }, tx);
+        conn.Execute("DELETE FROM AppRules WHERE Id = @id", new { id }, tx);
+        tx.Commit();
     }
 
     // ── Daily Usage ───────────────────────────────────────────────────────────
@@ -293,5 +365,84 @@ public class DatabaseService
               )
             ORDER BY 1
             """, new { cutoff }).ToList();
+    }
+
+    private static List<AppRuleDaySchedule> GetSchedulesForPersistence(AppRule rule)
+    {
+        if (rule.DaySchedules.Count == 0)
+            return BuildUniformSchedules(rule);
+
+        if (ShouldOverwriteSchedulesFromLegacyFields(rule))
+            return BuildUniformSchedules(rule);
+
+        return rule.GetWeekSchedule();
+    }
+
+    private static bool ShouldOverwriteSchedulesFromLegacyFields(AppRule rule)
+    {
+        var hasLegacyWindow = rule.AllowedWindowStart is not null || rule.AllowedWindowEnd is not null;
+
+        if (!rule.TryGetUniformSchedule(out var uniform))
+            return rule.DailyLimitMinutes > 0 || hasLegacyWindow;
+
+        return rule.DailyLimitMinutes != uniform.DailyLimitMinutes ||
+               !string.Equals(rule.AllowedWindowStart, uniform.AllowedWindowStart, StringComparison.Ordinal) ||
+               !string.Equals(rule.AllowedWindowEnd, uniform.AllowedWindowEnd, StringComparison.Ordinal);
+    }
+
+    private static List<AppRuleDaySchedule> BuildUniformSchedules(AppRule rule)
+    {
+        return new AppRule().GetWeekSchedule()
+            .Select(schedule => new AppRuleDaySchedule
+            {
+                DayOfWeek          = schedule.DayOfWeek,
+                DailyLimitMinutes  = rule.DailyLimitMinutes,
+                AllowedWindowStart = rule.AllowedWindowStart,
+                AllowedWindowEnd   = rule.AllowedWindowEnd
+            })
+            .ToList();
+    }
+
+    private static AppRuleDaySchedule GetLegacyScheduleForPersistence(List<AppRuleDaySchedule> schedules)
+    {
+        var first     = schedules[0];
+        var isUniform = schedules.All(schedule =>
+            schedule.DailyLimitMinutes == first.DailyLimitMinutes &&
+            string.Equals(schedule.AllowedWindowStart, first.AllowedWindowStart, StringComparison.Ordinal) &&
+            string.Equals(schedule.AllowedWindowEnd, first.AllowedWindowEnd, StringComparison.Ordinal));
+
+        return isUniform
+            ? new AppRuleDaySchedule
+            {
+                DayOfWeek          = first.DayOfWeek,
+                DailyLimitMinutes  = first.DailyLimitMinutes,
+                AllowedWindowStart = first.AllowedWindowStart,
+                AllowedWindowEnd   = first.AllowedWindowEnd
+            }
+            : new AppRuleDaySchedule { DayOfWeek = DayOfWeek.Monday };
+    }
+}
+
+file sealed class AppRuleDayScheduleRow
+{
+    public int RuleId { get; set; }
+
+    public DayOfWeek DayOfWeek { get; set; }
+
+    public int DailyLimitMinutes { get; set; }
+
+    public string? AllowedWindowStart { get; set; }
+
+    public string? AllowedWindowEnd { get; set; }
+
+    public AppRuleDaySchedule ToSchedule()
+    {
+        return new AppRuleDaySchedule
+        {
+            DayOfWeek          = DayOfWeek,
+            DailyLimitMinutes  = DailyLimitMinutes,
+            AllowedWindowStart = AllowedWindowStart,
+            AllowedWindowEnd   = AllowedWindowEnd
+        };
     }
 }

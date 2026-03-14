@@ -63,6 +63,15 @@ public class DatabaseMigrator
                 TimeSinceBreakMins  REAL    NOT NULL DEFAULT 0
             );
 
+            CREATE TABLE IF NOT EXISTS AppRuleDaySchedules (
+                RuleId          INTEGER NOT NULL,
+                DayOfWeek       INTEGER NOT NULL,
+                DailyLimitMins  INTEGER NOT NULL DEFAULT 0,
+                WindowStart     TEXT,
+                WindowEnd       TEXT,
+                PRIMARY KEY (RuleId, DayOfWeek)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_dailyusage_date ON DailyUsage(Date);
             CREATE INDEX IF NOT EXISTS idx_sessions_process ON Sessions(ProcessName, EndTime);
         """);
@@ -70,6 +79,26 @@ public class DatabaseMigrator
         // Phase 3 migrations — idempotent
         AddColumnIfMissing(conn, "Sessions", "WindowTitle", "TEXT");
         AddColumnIfMissing(conn, "Sessions", "IsPassive",   "INTEGER NOT NULL DEFAULT 0");
+
+        Execute(conn, """
+            INSERT INTO AppRuleDaySchedules (RuleId, DayOfWeek, DailyLimitMins, WindowStart, WindowEnd)
+            SELECT r.Id, d.DayOfWeek, r.DailyLimitMins, r.WindowStart, r.WindowEnd
+            FROM AppRules r
+            CROSS JOIN (
+                SELECT 0 AS DayOfWeek
+                UNION ALL SELECT 1
+                UNION ALL SELECT 2
+                UNION ALL SELECT 3
+                UNION ALL SELECT 4
+                UNION ALL SELECT 5
+                UNION ALL SELECT 6
+            ) d
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM AppRuleDaySchedules s
+                WHERE s.RuleId = r.Id
+            );
+        """);
     }
 
     // Private helper — avoids a dependency on Dapper inside the migrator
