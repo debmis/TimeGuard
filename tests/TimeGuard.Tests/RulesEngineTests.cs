@@ -6,29 +6,44 @@ namespace TimeGuard.Tests;
 
 public class RulesEngineTests
 {
-    private static AppConfig MakeConfig(int perAppLimit = 60, int overallLimit = 0,
-        string? windowStart = null, string? windowEnd = null) => new()
-    {
-        PasswordHash = "x", PasswordSalt = "x",
-        OverallDailyLimitMinutes = overallLimit,
-        Rules =
-        [
-            new AppRule
-            {
-                ProcessName          = "roblox",
-                DisplayName          = "Roblox",
-                DailyLimitMinutes    = perAppLimit,
-                AllowedWindowStart   = windowStart,
-                AllowedWindowEnd     = windowEnd,
-                Enabled              = true
-            }
-        ]
-    };
+    private static readonly DayOfWeek[] OrderedDays =
+    [
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday,
+        DayOfWeek.Sunday
+    ];
 
-    private static DailyLog MakeLog(double usedMinutes = 0, bool blocked = false) =>
+    private static AppConfig MakeConfig(int perAppLimit = 60, int overallLimit = 0,
+        string? windowStart = null, string? windowEnd = null, Action<AppRule>? configureRule = null)
+    {
+        var rule = new AppRule
+        {
+            ProcessName        = "roblox",
+            DisplayName        = "Roblox",
+            DailyLimitMinutes  = perAppLimit,
+            AllowedWindowStart = windowStart,
+            AllowedWindowEnd   = windowEnd,
+            Enabled            = true
+        };
+        configureRule?.Invoke(rule);
+
+        return new AppConfig
+        {
+            PasswordHash             = "x",
+            PasswordSalt             = "x",
+            OverallDailyLimitMinutes = overallLimit,
+            Rules = [rule]
+        };
+    }
+
+    private static DailyLog MakeLog(double usedMinutes = 0, bool blocked = false, DateOnly? date = null) =>
         new()
         {
-            Date = DateOnly.FromDateTime(DateTime.Today),
+            Date = date ?? DateOnly.FromDateTime(DateTime.Today),
             Entries =
             [
                 new UsageEntry
@@ -40,6 +55,20 @@ public class RulesEngineTests
             ],
             TotalUsageMinutes = usedMinutes
         };
+
+    private static List<AppRuleDaySchedule> MakeWeekSchedule(int defaultLimit = 0,
+        string? defaultStart = null, string? defaultEnd = null)
+    {
+        return OrderedDays
+            .Select(day => new AppRuleDaySchedule
+            {
+                DayOfWeek          = day,
+                DailyLimitMinutes  = defaultLimit,
+                AllowedWindowStart = defaultStart,
+                AllowedWindowEnd   = defaultEnd
+            })
+            .ToList();
+    }
 
     private readonly RulesEngine _engine = new();
     private readonly string[] _running = ["roblox"];
@@ -197,6 +226,60 @@ public class RulesEngineTests
 
         var breakTimers = new Dictionary<string, double> { ["roblox"] = 20 };
         var actions = _engine.Evaluate(_running, MakeLog(20), config, new TimeOnly(16, 0), breakTimers);
+        Assert.Empty(actions);
+    }
+
+    [Fact]
+    public void Block_WhenWeekdaySpecificLimitReached()
+    {
+        var wednesday = new DateOnly(2026, 3, 4);
+        var config = MakeConfig(configureRule: rule =>
+        {
+            var schedule = MakeWeekSchedule(defaultLimit: 60);
+            schedule.First(s => s.DayOfWeek == DayOfWeek.Wednesday).DailyLimitMinutes = 30;
+            rule.SetWeekSchedule(schedule);
+        });
+
+        var actions = _engine.Evaluate(_running, MakeLog(30, date: wednesday), config, new TimeOnly(13, 0));
+
+        Assert.Single(actions);
+        Assert.Equal(RulesEngine.ActionKind.Block, actions[0].Kind);
+        Assert.Contains("30 min", actions[0].Reason);
+    }
+
+    [Fact]
+    public void Block_WhenOutsideWeekdaySpecificWindow()
+    {
+        var wednesday = new DateOnly(2026, 3, 4);
+        var config = MakeConfig(configureRule: rule =>
+        {
+            var schedule = MakeWeekSchedule(defaultLimit: 0);
+            var wednesdaySchedule = schedule.First(s => s.DayOfWeek == DayOfWeek.Wednesday);
+            wednesdaySchedule.AllowedWindowStart = "12:00";
+            wednesdaySchedule.AllowedWindowEnd   = "14:00";
+            rule.SetWeekSchedule(schedule);
+        });
+
+        var actions = _engine.Evaluate(_running, MakeLog(0, date: wednesday), config, new TimeOnly(15, 0));
+
+        Assert.Single(actions);
+        Assert.Equal(RulesEngine.ActionKind.Block, actions[0].Kind);
+        Assert.Contains("12:00-14:00", actions[0].Reason);
+    }
+
+    [Fact]
+    public void NoAction_WhenAnotherDayHasShorterLimit()
+    {
+        var monday = new DateOnly(2026, 3, 2);
+        var config = MakeConfig(configureRule: rule =>
+        {
+            var schedule = MakeWeekSchedule(defaultLimit: 60);
+            schedule.First(s => s.DayOfWeek == DayOfWeek.Wednesday).DailyLimitMinutes = 30;
+            rule.SetWeekSchedule(schedule);
+        });
+
+        var actions = _engine.Evaluate(_running, MakeLog(45, date: monday), config, new TimeOnly(13, 0));
+
         Assert.Empty(actions);
     }
 }

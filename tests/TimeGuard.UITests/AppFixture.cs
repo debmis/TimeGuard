@@ -58,6 +58,8 @@ public class AppFixture : IDisposable
 
     protected DatabaseService OpenDb() => new($"Data Source={_dbPath};");
 
+    public DatabaseService OpenDatabase() => OpenDb();
+
     protected static (string hash, string salt) HashPassword(string password)
     {
         var saltBytes = RandomNumberGenerator.GetBytes(32);

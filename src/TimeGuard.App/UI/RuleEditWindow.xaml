@@ -2,73 +2,113 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Edit App Rule"
-        Width="380" Height="450"
+        Width="560" Height="720"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource DarkBrush}">
-    <StackPanel Margin="24">
-        <TextBlock Text="App Display Name:" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-        <TextBox x:Name="DisplayNameBox" AutomationProperties.AutomationId="DisplayNameBox" Background="{StaticResource SurfaceBrush}"
-                 Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
-                 Padding="8,5" Margin="0,0,0,12"/>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24">
+            <TextBlock Text="App Display Name:" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+            <TextBox x:Name="DisplayNameBox" AutomationProperties.AutomationId="DisplayNameBox" Background="{StaticResource SurfaceBrush}"
+                     Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                     Padding="8,5" Margin="0,0,0,12"/>
 
-        <TextBlock Text="Process Name (without .exe):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-        <TextBox x:Name="ProcessNameBox" AutomationProperties.AutomationId="ProcessNameBox" Background="{StaticResource SurfaceBrush}"
-                 Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
-                 Padding="8,5" Margin="0,0,0,12"/>
+            <TextBlock Text="Process Name (without .exe):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+            <TextBox x:Name="ProcessNameBox" AutomationProperties.AutomationId="ProcessNameBox" Background="{StaticResource SurfaceBrush}"
+                     Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                     Padding="8,5" Margin="0,0,0,16"/>
 
-        <TextBlock Text="Daily Limit (minutes, 0 = no limit):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-        <TextBox x:Name="LimitBox" AutomationProperties.AutomationId="LimitBox" Background="{StaticResource SurfaceBrush}"
-                 Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
-                 Padding="8,5" Margin="0,0,0,12"/>
+            <TextBlock Text="Weekly Schedule" Foreground="{StaticResource TextBrush}" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock Text="Use `0` for no daily limit. Leave both time fields empty for no window."
+                       Foreground="{StaticResource SubtextBrush}" FontSize="11" Margin="0,0,0,8"/>
 
-        <Grid Margin="0,0,0,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="Allowed From (HH:mm):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="WindowStartBox" Background="{StaticResource SurfaceBrush}"
-                         Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
-                         Padding="8,5"/>
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="90"/>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Day" Foreground="{StaticResource SubtextBrush}" FontWeight="SemiBold" Margin="0,0,8,6"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="Limit" Foreground="{StaticResource SubtextBrush}" FontWeight="SemiBold" Margin="0,0,8,6"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="From" Foreground="{StaticResource SubtextBrush}" FontWeight="SemiBold" Margin="0,0,8,6"/>
+                <TextBlock Grid.Row="0" Grid.Column="3" Text="To" Foreground="{StaticResource SubtextBrush}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Monday" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                <TextBox x:Name="MondayLimitBox" Grid.Row="1" Grid.Column="1" AutomationProperties.AutomationId="MondayLimitBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="MondayWindowStartBox" Grid.Row="1" Grid.Column="2" AutomationProperties.AutomationId="MondayWindowStartBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="MondayWindowEndBox" Grid.Row="1" Grid.Column="3" AutomationProperties.AutomationId="MondayWindowEndBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Tuesday" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                <TextBox x:Name="TuesdayLimitBox" Grid.Row="2" Grid.Column="1" AutomationProperties.AutomationId="TuesdayLimitBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="TuesdayWindowStartBox" Grid.Row="2" Grid.Column="2" AutomationProperties.AutomationId="TuesdayWindowStartBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="TuesdayWindowEndBox" Grid.Row="2" Grid.Column="3" AutomationProperties.AutomationId="TuesdayWindowEndBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Wednesday" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                <TextBox x:Name="WednesdayLimitBox" Grid.Row="3" Grid.Column="1" AutomationProperties.AutomationId="WednesdayLimitBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="WednesdayWindowStartBox" Grid.Row="3" Grid.Column="2" AutomationProperties.AutomationId="WednesdayWindowStartBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="WednesdayWindowEndBox" Grid.Row="3" Grid.Column="3" AutomationProperties.AutomationId="WednesdayWindowEndBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Thursday" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                <TextBox x:Name="ThursdayLimitBox" Grid.Row="4" Grid.Column="1" AutomationProperties.AutomationId="ThursdayLimitBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="ThursdayWindowStartBox" Grid.Row="4" Grid.Column="2" AutomationProperties.AutomationId="ThursdayWindowStartBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="ThursdayWindowEndBox" Grid.Row="4" Grid.Column="3" AutomationProperties.AutomationId="ThursdayWindowEndBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Friday" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                <TextBox x:Name="FridayLimitBox" Grid.Row="5" Grid.Column="1" AutomationProperties.AutomationId="FridayLimitBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="FridayWindowStartBox" Grid.Row="5" Grid.Column="2" AutomationProperties.AutomationId="FridayWindowStartBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="FridayWindowEndBox" Grid.Row="5" Grid.Column="3" AutomationProperties.AutomationId="FridayWindowEndBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="Saturday" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                <TextBox x:Name="SaturdayLimitBox" Grid.Row="6" Grid.Column="1" AutomationProperties.AutomationId="SaturdayLimitBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="SaturdayWindowStartBox" Grid.Row="6" Grid.Column="2" AutomationProperties.AutomationId="SaturdayWindowStartBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,8"/>
+                <TextBox x:Name="SaturdayWindowEndBox" Grid.Row="6" Grid.Column="3" AutomationProperties.AutomationId="SaturdayWindowEndBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="7" Grid.Column="0" Text="Sunday" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBox x:Name="SundayLimitBox" Grid.Row="7" Grid.Column="1" AutomationProperties.AutomationId="SundayLimitBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,0"/>
+                <TextBox x:Name="SundayWindowStartBox" Grid.Row="7" Grid.Column="2" AutomationProperties.AutomationId="SundayWindowStartBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,8,0"/>
+                <TextBox x:Name="SundayWindowEndBox" Grid.Row="7" Grid.Column="3" AutomationProperties.AutomationId="SundayWindowEndBox" Background="{StaticResource SurfaceBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}" Padding="8,5" Margin="0,0,0,0"/>
+            </Grid>
+
+            <TextBlock Text="Break Schedule" Foreground="{StaticResource TextBrush}" FontWeight="Bold" Margin="0,0,0,8"/>
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Break every N min (0=off):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+                    <TextBox x:Name="BreakEveryBox" AutomationProperties.AutomationId="BreakEveryBox" Background="{StaticResource SurfaceBrush}"
+                             Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                             Padding="8,5"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Break duration (min):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
+                    <TextBox x:Name="BreakDurationBox" AutomationProperties.AutomationId="BreakDurationBox" Background="{StaticResource SurfaceBrush}"
+                             Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
+                             Padding="8,5"/>
+                </StackPanel>
+            </Grid>
+
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource AccentBrush}" FontSize="11"
+                       Margin="0,0,0,10" Visibility="Collapsed" TextWrapping="Wrap"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Save" Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Click="OnSave"/>
+                <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Click="OnCancel"/>
             </StackPanel>
-            <StackPanel Grid.Column="2">
-                <TextBlock Text="Allowed Until (HH:mm):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="WindowEndBox" Background="{StaticResource SurfaceBrush}"
-                         Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
-                         Padding="8,5"/>
-            </StackPanel>
-        </Grid>
-
-        <TextBlock Text="Break Schedule" Foreground="{StaticResource TextBrush}" FontWeight="Bold" Margin="0,0,0,8"/>
-        <Grid Margin="0,0,0,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="Break every N min (0=off):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="BreakEveryBox" AutomationProperties.AutomationId="BreakEveryBox" Background="{StaticResource SurfaceBrush}"
-                         Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
-                         Padding="8,5"/>
-            </StackPanel>
-            <StackPanel Grid.Column="2">
-                <TextBlock Text="Break duration (min):" Foreground="{StaticResource SubtextBrush}" Margin="0,0,0,4"/>
-                <TextBox x:Name="BreakDurationBox" AutomationProperties.AutomationId="BreakDurationBox" Background="{StaticResource SurfaceBrush}"
-                         Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource AccentBrush}"
-                         Padding="8,5"/>
-            </StackPanel>
-        </Grid>
-
-        <TextBlock x:Name="ErrorText" Foreground="{StaticResource AccentBrush}" FontSize="11"
-                   Margin="0,0,0,10" Visibility="Collapsed"/>
-
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Save" Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Click="OnSave"/>
-            <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Click="OnCancel"/>
         </StackPanel>
-    </StackPanel>
+    </ScrollViewer>
 </Window>

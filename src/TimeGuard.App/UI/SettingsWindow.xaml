@@ -57,9 +57,8 @@
                                 <DataGridCheckBoxColumn  Header="On"          Binding="{Binding Enabled}"              Width="40"/>
                                 <DataGridTextColumn      Header="App Name"    Binding="{Binding DisplayName}"          Width="*"/>
                                 <DataGridTextColumn      Header="Process"     Binding="{Binding ProcessName}"          Width="110"/>
-                                <DataGridTextColumn      Header="Limit (min)" Binding="{Binding DailyLimitMinutes}"    Width="80"/>
-                                <DataGridTextColumn      Header="From"        Binding="{Binding AllowedWindowStart}"   Width="60"/>
-                                <DataGridTextColumn      Header="To"          Binding="{Binding AllowedWindowEnd}"     Width="60"/>
+                                <DataGridTextColumn      Header="Limit Schedule" Binding="{Binding WeeklyLimitSummary}"  Width="170"/>
+                                <DataGridTextColumn      Header="Allowed Times"  Binding="{Binding WeeklyWindowSummary}" Width="200"/>
                                 <DataGridTextColumn      Header="Break every" Binding="{Binding BreakEveryMinutes}"    Width="80"/>
                                 <DataGridTextColumn      Header="Break dur."  Binding="{Binding BreakDurationMinutes}" Width="75"/>
                             </DataGrid.Columns>

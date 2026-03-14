@@ -2,7 +2,7 @@
 
 > **Quietly protect your kids' screen time — without the arguments.**
 
-A lightweight Windows parental screen-time manager that runs silently in the background, enforces per-app daily limits, restricts apps to allowed time-of-day windows, enforces mandatory break schedules, and blocks relaunches once limits are hit. Limits reset at midnight. 🌙
+A lightweight Windows parental screen-time manager that runs silently in the background, enforces per-app daily limits with optional weekday-specific schedules, restricts apps to allowed time-of-day windows, enforces mandatory break schedules, and blocks relaunches once limits are hit. Limits reset at midnight. 🌙
 
 ---
 
@@ -37,6 +37,7 @@ Press **Ctrl + Alt + Shift + G** at any time to open the parent settings panel (
 
 - 👻 **Invisible** — no taskbar entry, no tray icon, totally silent
 - ⏱️ **Per-app daily time limits** + an overall daily cap across all apps
+- 📅 **Weekday-specific schedules** — set different daily limits and allowed windows for each day
 - 🕐 **Time-of-day windows** — allow apps only between certain hours
 - ☕ **Mandatory break schedules** per app (e.g. 5-min break every 30 min)
 - ⚠️ **5-minute warning popup** before a limit expires
@@ -128,7 +129,8 @@ All data lives in `%AppData%\TimeGuard\timeguard.db`.
 | Table | Purpose |
 |---|---|
 | `Settings` | Key-value store — password hash, hotkey, overall daily cap |
-| `AppRules` | Per-app rules: limit, time window, break schedule, enabled flag |
+| `AppRules` | Per-app rules: identity, break schedule, enabled flag, and legacy uniform schedule fields |
+| `AppRuleDaySchedules` | Per-app weekday schedules: daily limit and allowed window for each day |
 | `DailyUsage` | Per-app usage in minutes per calendar day, blocked flag |
 | `Sessions` | Running session tracking used for break timer accumulation |
 
